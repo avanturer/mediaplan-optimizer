@@ -11,5 +11,4 @@ dist/
 runs/
 .env
 junit.xml
-.claude/claude-bestpractice/
 *.egg-info/
