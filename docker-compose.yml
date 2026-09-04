@@ -1,0 +1,29 @@
+services:
+  mediaplan:
+    build: .
+    image: mediaplan-optimizer:0.1.0
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONPATH=/app
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8000/api/meta')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # Стенд: три демонстрации и сравнение стратегий на 20 мирах, результаты в ./results
+  demos:
+    build: .
+    image: mediaplan-optimizer:0.1.0
+    profiles: ["demos"]
+    command: ["python", "scripts/run_demos.py", "--seeds", "20"]
+    volumes:
+      - ./results:/app/results
+
+  # Тесты: python -m pytest внутри контейнера
+  tests:
+    build: .
+    image: mediaplan-optimizer:0.1.0
+    profiles: ["tests"]
+    command: ["python", "-m", "pytest", "-q"]
