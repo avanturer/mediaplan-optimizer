@@ -408,7 +408,7 @@ async function degradationTest() {
       {label: 'наша: отклонение KPI', data: d.rows.map(x => x.adaptive_dev_kpi * 100), borderColor: '#1F8A70', borderWidth: 2.5},
       {label: 'заморозка: отклонение KPI', data: d.rows.map(x => x.frozen_dev_kpi * 100), borderColor: '#A9701A'},
       {label: 'порог кейса', data: d.rows.map(() => d.threshold * 100), borderColor: '#9C3A2B', borderDash: [6,4]},
-    ], 'Отклонение KPI в конце кампании, %, при усилении шока');
+    ], 'Отклонение KPI в конце кампании, %, при усилении шока', [], true);
   } catch (e) { box.innerHTML = '<p class="muted">Ошибка: ' + e.message + '</p>'; }
   $('#btn-degrade').disabled = false;
 }
@@ -453,12 +453,12 @@ async function compareStrategies() {
 }
 
 function destroy(id) { if (CHARTS[id]) { CHARTS[id].destroy(); delete CHARTS[id]; } }
-function lineChart(id, labels, datasets, title, plugins=[]) {
+function lineChart(id, labels, datasets, title, plugins=[], rawLabels=false) {
   destroy(id);
   CHARTS[id] = new Chart($('#' + id), {type: 'line', data: {labels, datasets: datasets.map(d => ({pointRadius: 0, borderWidth: 1.5, tension: 0.15, spanGaps: false, ...d}))},
     options: {responsive: true, maintainAspectRatio: false, animation: false, interaction: {mode: 'index', intersect: false},
       plugins: {title: {display: true, text: title}, legend: {position: 'bottom', labels: {boxWidth: 10}}},
-      scales: {x: {ticks: {maxTicksLimit: 12, callback: (v, i) => (i % 24 === 0 ? 'д' + (i/24 + 1) : '')}}, y: {beginAtZero: true}}}, plugins});
+      scales: {x: {ticks: {maxTicksLimit: 12, callback: (v, i) => rawLabels ? labels[i] : (i % 24 === 0 ? 'д' + (i/24 + 1) : '')}}, y: {beginAtZero: true}}}, plugins});
 }
 init();
 </script>
