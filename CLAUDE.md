@@ -36,8 +36,8 @@
 
 ## Где что лежит
 - `contracts/` — схемы границ (каталог, наблюдение, действие, бриф, план, решение). Ни от кого не зависят.
-- `world/` — модель мира и симулятор (MLE #1): `reset / step / inject_shock`, три профиля каналов, сценарии шоков.
-- `brain/` — планировщик и исполнитель (MLE #2). Никогда не импортирует `world` (import-linter + тест).
+- `world/` — модель мира и симулятор (MLE #2): `reset / step / inject_shock`, три профиля каналов, сценарии шоков.
+- `brain/` — планировщик и исполнитель (MLE #1). Никогда не импортирует `world` (import-linter + тест).
 - `harness/` — стенд: ретро-пробы, цикл прогона, метрики, парное сравнение стратегий.
 - `app/` — FastAPI и веб-кабинет (`app/static/index.html`).
 - `config/benchmarks.yaml` — числа с источниками; `config/assumptions.yaml` — допущения мира;
@@ -54,5 +54,5 @@
 ## Что уже сделано
 - Ресёрч-карта решений и источников: https://claude.ai/code/artifact/3d480d3e-aefb-4414-a1ca-4b5a62fe2dda
 - План работы команды (срезы, роли, стоп-сигналы): https://claude.ai/code/artifact/b1366e9a-0e19-4394-a5be-93eecea8acf9
-- План MLE #2 и контракт с командой: `docs/mle2_plan.md`, артефакт https://claude.ai/code/artifact/23ae9516-81a3-4602-8646-3f4c8508ee84
-- Одностраничник к встрече 03.09: `docs/mle2_onepager.md`, артефакт https://claude.ai/code/artifact/35ff1126-2328-4bff-8827-baf5ea62ce4e
+- План MLE #1 и контракт с командой: `docs/optimizer_plan.md`, артефакт https://claude.ai/code/artifact/23ae9516-81a3-4602-8646-3f4c8508ee84
+- Одностраничник к встрече 03.09: `docs/optimizer_onepager.md`, артефакт https://claude.ai/code/artifact/35ff1126-2328-4bff-8827-baf5ea62ce4e
