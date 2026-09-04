@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MediaPlan Optimizer</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{--bg:#F2F4F7;--surface:#fff;--ink:#141A22;--ink2:#3F4A59;--ink3:#6B7688;--rule:#D2D9E2;--plan:#24486B;--fact:#1F8A70;--frozen:#A9701A;--alert:#9C3A2B;--ok:#2C6552;--warn:#B7791F}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+  header{background:var(--surface);border-bottom:1px solid var(--rule);padding:14px 28px;display:flex;align-items:baseline;gap:18px;flex-wrap:wrap}
+  header h1{margin:0;font-size:18px}
+  header span{color:var(--ink3);font-size:13px}
+  main{max-width:1280px;margin:0 auto;padding:20px 28px 60px;display:grid;gap:22px}
+  section{background:var(--surface);border:1px solid var(--rule);border-radius:6px;padding:18px 20px}
+  h2{margin:0 0 12px;font-size:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  h2 small{color:var(--ink3);font-weight:400}
+  h3{margin:16px 0 8px;font-size:14px;color:var(--ink2)}
+  .row{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:flex-end}
+  label{display:flex;flex-direction:column;font-size:12px;color:var(--ink3);gap:4px}
+  input,select{padding:6px 8px;border:1px solid var(--rule);border-radius:4px;font:inherit;min-width:120px;background:#fff;color:var(--ink)}
+  button{padding:8px 14px;border:0;border-radius:4px;background:var(--plan);color:#fff;font:inherit;cursor:pointer}
+  button.secondary{background:#E3EAF2;color:var(--plan)}
+  button.small{padding:5px 10px;font-size:13px}
+  button:disabled{opacity:.5;cursor:wait}
+  table{border-collapse:collapse;width:100%;font-size:13px;margin-top:10px}
+  th,td{padding:6px 8px;border-bottom:1px solid var(--rule);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+  th:first-child,td:first-child{text-align:left}
+  th{color:var(--ink2);font-weight:600;background:#F7F9FB}
+  tr.dim td{color:var(--ink3)}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:10px 0}
+  .tile{border:1px solid var(--rule);border-radius:4px;padding:10px 12px}
+  .tile b{display:block;font-size:20px;font-variant-numeric:tabular-nums}
+  .tile span{font-size:12px;color:var(--ink3)}
+  .tile.plan b{color:var(--plan)} .tile.fact b{color:var(--fact)} .tile.alert b{color:var(--alert)} .tile.ok b{color:var(--ok)}
+  .verdict{border-left:4px solid var(--alert);background:#FBF1EE;padding:12px 14px;border-radius:4px;margin:10px 0}
+  .verdict.ok{border-left-color:var(--ok);background:#EEF6F1}
+  .verdict.note{border-left-color:var(--plan);background:#EEF3F8}
+  .moves{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-top:10px}
+  .move{border:1px solid var(--rule);border-radius:4px;padding:10px 12px;font-size:13px}
+  .move b{display:block;margin-bottom:4px}
+  .charts{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .chart{position:relative;height:280px}
+  .status{display:inline-block;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:600;vertical-align:middle}
+  .status.ok{background:#DFEDE6;color:var(--ok)} .status.watch{background:#FBEFD9;color:var(--warn)} .status.fire{background:#F3E0DB;color:var(--alert)}
+  .status.big{font-size:15px;padding:6px 14px}
+  .badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;background:#DFEDE6;color:var(--ok);font-weight:600}
+  .badge.bad{background:#F3E0DB;color:var(--alert)}
+  .feed{max-height:240px;overflow:auto;font-size:13px;border:1px solid var(--rule);border-radius:4px;padding:8px 10px;background:#FAFBFC}
+  .feed div{padding:3px 0;border-bottom:1px dashed var(--rule)}
+  .card{border:1px solid var(--rule);border-left:3px solid var(--plan);border-radius:4px;padding:10px 12px;font-size:13px;margin-top:8px;background:#FAFBFC}
+  .card b{color:var(--plan)}
+  .card.pending{border-left-color:var(--warn)}
+  .muted{color:var(--ink3);font-size:13px}
+  .player{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0;padding:10px 12px;border:1px solid var(--rule);border-radius:4px;background:#FAFBFC}
+  .player input[type=range]{flex:1;min-width:200px}
+  .player .clock{font-variant-numeric:tabular-nums;font-weight:600;min-width:150px}
+  pre.explain{white-space:pre-wrap;font:12px/1.5 ui-monospace,monospace;background:#F7F9FB;padding:10px;border-radius:4px;max-height:200px;overflow:auto}
+  .two{display:grid;grid-template-columns:1.2fr 1fr;gap:16px}
+  @media (max-width:900px){.charts,.two{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><h1>MediaPlan Optimizer</h1><span>план → утверждение → почасовое удержание · каналы абстрактные, данные синтетические</span></header>
+<main>
+
+<section id="brief">
+  <h2>1. Бриф <small>медиапланер</small></h2>
+  <div class="row">
+    <label>Постановка<select id="mode"><option value="A">A: задан бюджет, максимизируем KPI</option><option value="B">B: задан объём KPI, ищем бюджет</option></select></label>
+    <label>Пресет каналов<select id="preset"></select></label>
+    <label id="f-budget">Бюджет, ₽<input id="budget" type="number" value="1200000" step="10000"></label>
+    <label id="f-objective">Цель<select id="objective"><option value="max_conversions">максимум конверсий</option><option value="max_clicks">максимум кликов</option><option value="max_reach">максимум охвата</option></select></label>
+    <label id="f-tkpi" hidden>KPI<select id="target_kpi"><option value="clicks">клики</option><option value="conversions">конверсии</option><option value="reach">охват</option></select></label>
+    <label id="f-tval" hidden>Целевой объём<input id="target_value" type="number" value="50000" step="1000"></label>
+    <label>Горизонт, дней<input id="horizon" type="number" value="21" min="1" max="90"></label>
+    <label>Макс. CPA, ₽<input id="max_cpa" type="number" placeholder="без ограничения"></label>
+    <label>Лимит автоматики за ход, ₽<input id="auto_limit" type="number" placeholder="без лимита"></label>
+    <button id="btn-plan">Рассчитать</button>
+    <button class="secondary" id="btn-demo1">Демо 1</button>
+    <button class="secondary" id="btn-demo2">Демо 2</button>
+  </div>
+  <p class="muted" id="brief-note">Демо 1: 1,2 млн ₽ на 21 день, максимум конверсий. Демо 2: 50 000 кликов за 14 дней на узком пресете, сервис должен отказать и предложить ходы.</p>
+</section>
+
+<section id="plan" hidden>
+  <h2>2. Медиаплан <small id="plan-id"></small><span id="plan-approved"></span></h2>
+  <div id="plan-body"></div>
+</section>
+
+<section id="run" hidden>
+  <h2>3. Кампания по часам <small>трафик-менеджер · 1 час = 1 шаг</small></h2>
+  <div class="row">
+    <label>Стратегия<select id="strategy"><option value="adaptive">наша: два контура</option><option value="pid">PID</option><option value="proportional_pacing">только темп</option><option value="static">заморозка</option></select></label>
+    <label>Режим исполнения<select id="hold_plan"><option value="true">держать план (резерв бюджета)</option><option value="false">выжимать максимум KPI</option></select></label>
+    <label>Сценарий мира<select id="scenario"></select></label>
+    <label>Зерно мира<input id="world_seed" type="number" value="1" style="min-width:80px"></label>
+    <label>Шок из интерфейса: канал<select id="shock_channel"><option value="">нет</option></select></label>
+    <label>Тип<select id="shock_param"></select></label>
+    <label>Множитель<input id="shock_mult" type="number" value="0.6" step="0.1" style="min-width:80px"></label>
+    <label>С часа<input id="shock_hour" type="number" value="240" style="min-width:80px"></label>
+    <button id="btn-run">Запустить</button>
+    <button class="secondary" id="btn-compare">Сравнить стратегии на 20 мирах</button>
+    <button class="secondary" id="btn-degrade">Где ломается решение</button>
+  </div>
+  <div id="run-body"></div>
+</section>
+
+<section id="summary" hidden>
+  <h2>4. Итог <small>обещали, получили, что произошло</small></h2>
+  <div id="summary-body"></div>
+</section>
+
+</main>
+<script>
+const $ = (s) => document.querySelector(s);
+const fmt = (n, d=0) => n == null ? '—' : Number(n).toLocaleString('ru-RU', {maximumFractionDigits: d, minimumFractionDigits: d});
+const pct = (x, d=1) => x == null ? '—' : (x*100).toFixed(d) + ' %';
+const STATUS_RU = {ok:'в норме', watch:'наблюдаем', fire:'пожар'};
+const KPI_RU = {conversions:'конверсии', clicks:'клики', reach:'охват'};
+let META = null, PLAN = null, RUN = null, CHARTS = {}, PLAYER = {h:0, timer:null, speed:10};
+
+async function api(path, body) {
+  const r = await fetch(path, body ? {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)} : {method: path.includes('/approve') ? 'POST' : 'GET'});
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.detail || r.statusText);
+  return data;
+}
+
+async function init() {
+  META = await api('/api/meta');
+  for (const [k, v] of Object.entries(META.presets)) $('#preset').append(new Option(v.title, k));
+  for (const [k, v] of Object.entries(META.scenarios)) $('#scenario').append(new Option(v.title || k, k));
+  for (const c of META.catalog.channels) $('#shock_channel').append(new Option(c.display_name + ' (' + c.channel_id + ')', c.channel_id));
+  for (const p of META.shock_parameters) $('#shock_param').append(new Option(p, p));
+  $('#mode').onchange = () => { const b = $('#mode').value === 'A'; $('#f-budget').hidden = !b; $('#f-objective').hidden = !b; $('#f-tkpi').hidden = b; $('#f-tval').hidden = b; };
+  $('#btn-plan').onclick = () => makePlan();
+  $('#btn-demo1').onclick = () => { $('#mode').value='A'; $('#mode').onchange(); $('#preset').value='all'; $('#budget').value=1200000; $('#horizon').value=21; $('#objective').value='max_conversions'; $('#auto_limit').value=100000; makePlan(); };
+  $('#btn-demo2').onclick = () => { $('#mode').value='B'; $('#mode').onchange(); $('#preset').value='narrow'; $('#target_kpi').value='clicks'; $('#target_value').value=50000; $('#horizon').value=14; makePlan(); };
+  $('#btn-run').onclick = () => runCampaign();
+  $('#btn-compare').onclick = () => compareStrategies();
+  $('#btn-degrade').onclick = () => degradationTest();
+}
+
+function briefFromForm(overrides={}) {
+  const mode = $('#mode').value;
+  const req = {mode, preset: $('#preset').value, horizon_days: +$('#horizon').value,
+    max_cpa_rub: $('#max_cpa').value ? +$('#max_cpa').value : null,
+    automation_limit_rub: $('#auto_limit').value ? +$('#auto_limit').value : null, ...overrides};
+  if (mode === 'A') { req.budget_rub = +$('#budget').value; req.objective = $('#objective').value; }
+  else { req.target_kpi = $('#target_kpi').value; req.target_value = +$('#target_value').value; }
+  return req;
+}
+
+async function makePlan(overrides={}) {
+  $('#btn-plan').disabled = true; $('#brief-note').textContent = 'считаем…';
+  try { const t0 = performance.now(); PLAN = await api('/api/plan', briefFromForm(overrides)); PLAN._ms = performance.now() - t0; PLAN._req = briefFromForm(overrides); renderPlan(PLAN); $('#brief-note').textContent = ''; }
+  catch (e) { $('#brief-note').textContent = 'Ошибка: ' + e.message; }
+  $('#btn-plan').disabled = false;
+}
+
+function kpiOf(t, kpi) { return kpi === 'clicks' ? t.cum_clicks : kpi === 'reach' ? t.cum_reach : t.cum_conversions; }
+function allocKpi(a, kpi) { return kpi === 'clicks' ? a.clicks : kpi === 'reach' ? a.unique_reach : a.conversions; }
+function marginalLabel(kpi) { return kpi === 'conversions' ? 'Цена след. конверсии, ₽' : 'Цена след. 1000 ' + KPI_RU[kpi] + ', ₽'; }
+function marginalValue(a, kpi) { return a.marginal_cost_per_1000_kpi_rub == null ? null : (kpi === 'conversions' ? a.marginal_cost_per_1000_kpi_rub / 1000 : a.marginal_cost_per_1000_kpi_rub); }
+
+function renderPlan(p) {
+  $('#plan').hidden = false; $('#plan-id').textContent = 'план ' + p.plan_id + ' · KPI: ' + KPI_RU[p.kpi_name];
+  $('#plan-approved').innerHTML = p.approved_version ? `<span class="badge">утверждён, версия ${p.approved_version}</span>` : '<span class="badge bad">не утверждён</span>';
+  const body = $('#plan-body');
+  $('#run').hidden = true; $('#summary').hidden = true;
+  if (p.infeasibility) {
+    const d = p.infeasibility;
+    body.innerHTML = `<div class="verdict"><b>Недостижимо.</b> ${d.explanation} Максимум при этих условиях: <b>${fmt(d.max_achievable)}</b> ${KPI_RU[p.kpi_name]}. Связывает: ${d.binding_constraint}.</div>
+      <div class="moves">${d.suggestions.map((s,i)=>`<div class="move"><b>${s.description}</b>ожидаем ${fmt(s.expected_kpi)} ${KPI_RU[p.kpi_name]} при бюджете ${fmt(s.expected_budget_rub)} ₽<br><button class="small" data-i="${i}">Применить и пересчитать</button></div>`).join('')}</div>
+      <p class="muted">Отказ без числа читается как нежелание расти. Здесь три хода с посчитанным результатом: разговор с клиентом становится выбором, а не спором.</p>`;
+    body.querySelectorAll('button').forEach(b => b.onclick = () => applySuggestion(d.suggestions[+b.dataset.i]));
+    return;
+  }
+  const f = p.forecast, cpa = p.total_budget_rub / (p.total_kpi || 1);
+  const atCeiling = p.allocations.filter(a => a.capacity_utilization >= 0.95).length;
+  const tiles = [
+    ['Бюджет', fmt(p.total_budget_rub) + ' ₽', p.brief.budget_rub ? 'задан брифом' : 'достаточный для цели', 'plan'],
+    ['Прогноз, ' + KPI_RU[p.kpi_name], fmt(f.p50), 'коридор ' + fmt(f.p10) + ' – ' + fmt(f.p90), 'plan'],
+    [p.kpi_name === 'conversions' ? 'CPA' : 'Цена единицы KPI', fmt(cpa) + ' ₽', 'по плану', ''],
+    ['Надёжность плана', f.probability_of_target != null ? pct(f.probability_of_target, 0) : '±' + pct(p.corridor_rel, 0), f.probability_of_target != null ? 'шанс выполнить цель' : 'коридор из неопределённости каталога', ''],
+    ['Каналов у потолка', atCeiling + ' из ' + p.allocations.length, 'ёмкость выкуплена ≥ 95 %', atCeiling >= p.allocations.length - 1 ? 'alert' : 'ok'],
+    ['Считалось', (p._ms/1000).toFixed(2) + ' с', 'вместо рабочего дня в Excel; пересчёт брифа это секунда, а не день', 'ok'],
+  ];
+  const cheapest = Math.min(...p.allocations.filter(a => a.capacity_utilization < 0.95 && marginalValue(a, p.kpi_name)).map(a => marginalValue(a, p.kpi_name)));
+  if (isFinite(cheapest)) tiles.push(['Ещё 100 000 ₽ дали бы', '+' + fmt(p.kpi_name === 'conversions' ? 100000 / cheapest : 100000 / cheapest * 1000) + ' ' + KPI_RU[p.kpi_name], 'по цене следующей единицы в самом дешёвом незаполненном канале', '']);
+  const rows = p.allocations.map(a => `<tr><td>${a.display_name}${a.locked?' 🔒':''}</td><td>${fmt(a.budget_rub)}</td><td>${pct(a.budget_rub/p.total_budget_rub)}</td><td>${fmt(a.impressions)}</td><td>${fmt(a.unique_reach)}</td><td>${fmt(a.clicks)}</td><td>${fmt(a.conversions)}</td><td>${pct(a.ctr,2)}</td><td>${a.vtr!=null?pct(a.vtr,0):'—'}</td><td>${pct(a.cvr,2)}</td><td>${fmt(a.cpm_rub)}</td><td>${fmt(a.cpc_rub)}</td><td>${fmt(a.cpa_rub)}</td><td>${fmt(a.frequency,1)}</td><td>${pct(a.capacity_utilization,0)}</td><td>${fmt(marginalValue(a, p.kpi_name))}</td></tr>`).join('');
+  const days = p.brief.horizon_days, channels = p.allocations.map(a=>a.channel_id);
+  const cal = {}; for (const c of p.calendar) (cal[c.channel_id] ||= {})[c.day] = c.budget_rub;
+  const calRows = channels.map(c => `<tr><td>${c}</td>${Array.from({length: days}, (_, i) => `<td>${fmt((cal[c]||{})[i+1]/1000, 1)}</td>`).join('')}</tr>`).join('');
+  body.innerHTML = `<div class="tiles">${tiles.map(t=>`<div class="tile ${t[3]}"><span>${t[0]}</span><b>${t[1]}</b><span>${t[2]}</span></div>`).join('')}</div>
+    <div class="row"><button id="btn-approve">Утвердить план</button><button class="secondary" id="btn-stress">Стресс-тест плана до запуска</button>${p.brief.budget_rub ? '<button class="secondary" id="btn-whatif">Что если бюджет −10 % / +10 %</button>' : ''}<span class="muted">Стресс-тест прогоняет план через все восемь шоков рынка и показывает, какие из них план выдерживает.</span></div>
+    <div id="whatif"></div>
+    <div id="stress"></div>
+    <div style="overflow:auto"><table><thead><tr><th>Канал</th><th>Бюджет, ₽</th><th>Доля</th><th>Показы</th><th>Охват</th><th>Клики</th><th>Конверсии</th><th>CTR</th><th>VTR</th><th>CR</th><th>CPM</th><th>CPC</th><th>CPA</th><th>Частота</th><th>Ёмкость</th><th>${marginalLabel(p.kpi_name)}</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <p class="muted">Последний столбец сравнивает каналы между собой: у активных каналов цена следующей единицы почти одинакова, это признак оптимума. Канал у потолка дальше не масштабируется ни за какие деньги.</p>
+    <div style="overflow:auto"><table><thead><tr><th>Календарь, тыс. ₽ в день</th>${Array.from({length: days}, (_, i) => `<th>${i+1}</th>`).join('')}</tr></thead><tbody>${calRows}</tbody></table></div>
+    <div class="charts"><div class="chart"><canvas id="c-plan-kpi"></canvas></div><div class="chart"><canvas id="c-plan-spend"></canvas></div></div>
+    <details style="margin-top:10px"><summary>Почему такое распределение: порядок наливания</summary><pre class="explain">${p.explanation.join('\n')}</pre></details>`;
+  const hours = p.trajectory.map(t => t.hour);
+  lineChart('c-plan-kpi', hours, [
+    {label: 'план, ' + KPI_RU[p.kpi_name], data: p.trajectory.map(t => kpiOf(t, p.kpi_name)), borderColor: '#24486B', borderDash:[6,4]},
+    {label: 'коридор −', data: p.trajectory.map(t => t.band_low_kpi), borderColor: '#B4BECB', borderWidth: 1},
+    {label: 'коридор +', data: p.trajectory.map(t => t.band_high_kpi), borderColor: '#B4BECB', borderWidth: 1, fill: '-1', backgroundColor: 'rgba(36,72,107,.08)'},
+  ], 'Плановая траектория KPI с коридором ±' + pct(p.corridor_rel,0));
+  lineChart('c-plan-spend', hours, [{label: 'план расхода, ₽', data: p.trajectory.map(t => t.cum_spend_rub), borderColor: '#24486B', borderDash:[6,4]}], 'Плановый накопительный расход');
+  $('#btn-approve').onclick = approvePlan;
+  $('#btn-stress').onclick = stressTest;
+  if ($('#btn-whatif')) $('#btn-whatif').onclick = whatIf;
+  $('#run').hidden = false;
+}
+
+function applySuggestion(s) {
+  if (s.changed_field === 'horizon_days') $('#horizon').value = s.suggested_value;
+  if (s.changed_field === 'target_value') $('#target_value').value = Math.round(s.suggested_value);
+  if (s.changed_field === 'channel_ids') { makePlan({channel_ids: s.suggested_value}); return; }
+  makePlan();
+}
+
+async function whatIf() {
+  const box = $('#whatif'); box.innerHTML = '<p class="muted">считаем два соседних плана…</p>';
+  const base = PLAN._req, b0 = PLAN.total_budget_rub, k0 = PLAN.total_kpi;
+  const [lo, hi] = await Promise.all([0.9, 1.1].map(f => api('/api/plan', {...base, budget_rub: Math.round(b0 * f)})));
+  const line = (p, f) => { const dk = p.total_kpi - k0; return `<tr><td>бюджет ${f > 1 ? '+' : '−'}10 %: ${fmt(p.total_budget_rub)} ₽</td><td>${fmt(p.total_kpi)} ${KPI_RU[p.kpi_name]}</td><td>${dk >= 0 ? '+' : ''}${fmt(dk)}</td><td>${fmt(Math.abs(p.total_budget_rub - b0) / Math.max(Math.abs(dk), 1))} ₽</td><td>${fmt(p.total_budget_rub / p.total_kpi)} ₽</td></tr>`; };
+  box.innerHTML = `<table><thead><tr><th>Вариант</th><th>Прогноз</th><th>Δ KPI</th><th>Цена каждой добавленной / потерянной единицы</th><th>Средняя цена</th></tr></thead><tbody>${line(lo, 0.9)}${line(hi, 1.1)}</tbody></table><p class="muted">Отдача вогнутая: последние 10 % бюджета приносят меньше, чем первые. Это и есть аргумент для разговора о бюджете с цифрой, а не с опытом.</p>`;
+}
+
+async function approvePlan() {
+  const r = await api('/api/plan/' + PLAN.plan_id + '/approve');
+  PLAN.approved_version = r.approved_version;
+  $('#plan-approved').innerHTML = `<span class="badge">утверждён, версия ${r.approved_version}</span>`;
+  $('#run').scrollIntoView({behavior:'smooth'});
+}
+
+async function stressTest() {
+  const box = $('#stress'); box.innerHTML = '<p class="muted">прогоняем план через восемь шоков…</p>';
+  $('#btn-stress').disabled = true;
+  try {
+    const r = await api('/api/stress', {plan_id: PLAN.plan_id, world_seed: +$('#world_seed').value, hold_plan: $('#hold_plan').value === 'true'});
+    const ok = r.rows.filter(x => x.withstands).length;
+    box.innerHTML = `<div class="verdict ${ok === r.rows.length ? 'ok' : 'note'}"><b>План выдерживает ${ok} из ${r.rows.length} шоков</b> при пороге кейса ${pct(r.threshold,0)} на отклонение в конце. Наша стратегия против заморозки на одном и том же мире.</div>
+      <table><thead><tr><th>Шок</th><th>Вердикт</th><th>Наша: откл. KPI / расхода</th><th>Заморозка: откл. KPI / расхода</th><th>KPI наша / заморозка</th><th>Детектор</th><th>Ходов</th></tr></thead><tbody>
+      ${r.rows.map(x => `<tr><td>${x.title}</td><td><span class="badge ${x.withstands?'':'bad'}">${x.withstands?'выдерживает':'уязвим'}</span></td><td>${pct(x.adaptive_dev_kpi)} / ${pct(x.adaptive_dev_spend)}</td><td>${pct(x.frozen_dev_kpi)} / ${pct(x.frozen_dev_spend)}</td><td>${fmt(x.adaptive_kpi)} / ${fmt(x.frozen_kpi)}</td><td>${Object.entries(x.detection_hours).map(([c,h])=>c+' @'+h).join(', ')||'—'}</td><td>${x.moves}</td></tr>`).join('')}</tbody></table>`;
+  } catch (e) { box.innerHTML = '<p class="muted">Ошибка: ' + e.message + '</p>'; }
+  $('#btn-stress').disabled = false;
+}
+
+async function runCampaign() {
+  $('#btn-run').disabled = true; stopPlayer();
+  $('#run-body').innerHTML = '<p class="muted">гоним кампанию по часам…</p>';
+  const shock = $('#shock_channel').value ? {channel_id: $('#shock_channel').value, parameter: $('#shock_param').value, multiplier: +$('#shock_mult').value, start_hour: +$('#shock_hour').value} : null;
+  try {
+    RUN = await api('/api/run', {plan_id: PLAN.plan_id, strategy: $('#strategy').value, scenario_id: $('#scenario').value, world_seed: +$('#world_seed').value, noise_seed: 10000 + +$('#world_seed').value, shock, hold_plan: $('#hold_plan').value === 'true', auto_apply_above_limit: false});
+    prepareRun(RUN);
+  } catch (e) { $('#run-body').innerHTML = '<p class="muted">Ошибка: ' + e.message + '</p>'; }
+  $('#btn-run').disabled = false;
+}
+
+function prepareRun(r) {
+  const m = r.main, N = m.hours.length, kpi = r.verdict.kpi_name;
+  const channels = Object.keys(m.hours[0].by_channel);
+  // накопительные суммы по каналам для таблицы часа
+  r.cum = {}; for (const c of channels) r.cum[c] = {spend:[], kpi:[], clicks:[], imps:[]};
+  const acc = {}; for (const c of channels) acc[c] = {spend:0, kpi:0, clicks:0, imps:0};
+  for (const h of m.hours) for (const c of channels) { const s = h.by_channel[c]; acc[c].spend += s.spend; acc[c].kpi += (kpi==='clicks'?s.clicks:kpi==='reach'?s.unique_reach:s.conversions); acc[c].clicks += s.clicks; acc[c].imps += s.impressions; for (const k in acc[c]) r.cum[c][k].push(acc[c][k]); }
+  r.shockHours = [...(m.shock_hours||[]), ...META.scenarios[m.scenario_id].events.map(e => e.start_hour)];
+  r.eventHours = m.hours.filter(h => h.events.length).map(h => h.hour);
+  $('#run-body').innerHTML = `
+    <div class="player">
+      <button class="small" id="p-play">▶ Смотреть по часам</button>
+      <button class="small secondary" id="p-next">До следующего события</button>
+      <button class="small secondary" id="p-end">К итогу</button>
+      <label style="flex-direction:row;align-items:center;gap:6px">скорость <select id="p-speed" style="min-width:70px"><option value="1">1 ч</option><option value="6">6 ч</option><option value="24" selected>сутки</option><option value="72">3 дня</option></select> за тик</label>
+      <input type="range" id="p-slider" min="1" max="${N}" value="1">
+      <span class="clock" id="p-clock"></span>
+      <span id="p-status"></span>
+    </div>
+    <div class="tiles" id="hour-tiles"></div>
+    <div class="verdict note" id="digest"></div>
+    <div id="decision-banner"></div>
+    <div class="charts"><div class="chart"><canvas id="c-run-kpi"></canvas></div><div class="chart"><canvas id="c-run-spend"></canvas></div></div>
+    <div class="two" style="margin-top:14px">
+      <div><h3>Каналы в этот час</h3><div style="overflow:auto"><table id="hour-table"></table></div></div>
+      <div><h3>Лента событий</h3><div class="feed" id="feed"></div><h3>Предложения и ходы автоматики</h3><div id="cards"></div></div>
+    </div>
+    <div class="chart" style="margin-top:14px;height:220px"><canvas id="c-run-stack"></canvas></div>
+    <div id="run-verdict"></div>`;
+  const hours = m.hours.map(h => h.hour);
+  const shockMark = {id:'shock', afterDraw(chart){ for (const sh of r.shockHours) { const x = chart.scales.x.getPixelForValue(sh - 1); if (!isFinite(x)) continue; const ctx = chart.ctx; ctx.save(); ctx.strokeStyle='#9C3A2B'; ctx.setLineDash([3,3]); ctx.beginPath(); ctx.moveTo(x, chart.chartArea.top); ctx.lineTo(x, chart.chartArea.bottom); ctx.stroke(); ctx.fillStyle='#9C3A2B'; ctx.font='11px system-ui'; ctx.fillText('шок · час '+sh, x+4, chart.chartArea.top+12); ctx.restore(); } }};
+  lineChart('c-run-kpi', hours, [
+    {label: 'план', data: m.hours.map(h => h.plan_cum_kpi), borderColor: '#24486B', borderDash: [6,4]},
+    {label: 'факт · ' + m.strategy, data: [], borderColor: '#1F8A70', borderWidth: 2.5},
+    {label: 'факт · заморозка', data: [], borderColor: '#A9701A'},
+  ], 'Накопительно, ' + KPI_RU[kpi] + ': план, факт, заморозка', [shockMark]);
+  lineChart('c-run-spend', hours, [
+    {label: 'план', data: m.hours.map(h => h.plan_cum_spend), borderColor: '#24486B', borderDash: [6,4]},
+    {label: 'факт · ' + m.strategy, data: [], borderColor: '#1F8A70', borderWidth: 2.5},
+    {label: 'факт · заморозка', data: [], borderColor: '#A9701A'},
+  ], 'Накопительный расход, ₽', [shockMark]);
+  const palette = ['#24486B','#4A7BA6','#7FA9D8','#A9701A','#D7A44E','#2C6552','#69B79A','#9C3A2B'];
+  destroy('c-run-stack');
+  CHARTS['c-run-stack'] = new Chart($('#c-run-stack'), {type:'bar', data:{labels: [], datasets: channels.map((c, i) => ({label: c, data: [], backgroundColor: palette[i%palette.length]}))}, options:{responsive:true, maintainAspectRatio:false, animation:false, plugins:{title:{display:true,text:'Куда уходили деньги: доля расхода по каналам по дням, %'}, legend:{position:'bottom', labels:{boxWidth:10, font:{size:10}}}}, scales:{x:{stacked:true}, y:{stacked:true, max:100}}}});
+  $('#p-play').onclick = togglePlay; $('#p-next').onclick = nextEvent; $('#p-end').onclick = () => { stopPlayer(); showHour(N); };
+  $('#p-slider').oninput = (e) => { stopPlayer(); showHour(+e.target.value); };
+  $('#p-speed').onchange = (e) => PLAYER.speed = +e.target.value;
+  PLAYER.speed = 24;
+  showHour(1);
+  $('#summary').hidden = true;
+}
+
+function showHour(H) {
+  const r = RUN, m = r.main, z = r.frozen, N = m.hours.length, kpi = r.verdict.kpi_name;
+  PLAYER.h = H; $('#p-slider').value = H;
+  const rec = m.hours[H-1];
+  const day = Math.floor((H-1)/24) + 1, hod = (H-1) % 24;
+  $('#p-clock').textContent = `день ${day}, ${String(hod).padStart(2,'0')}:00 · час ${H} из ${N}`;
+  $('#p-status').innerHTML = `<span class="status big ${rec.status}">${STATUS_RU[rec.status]}</span>`;
+  const errS = rec.err_spend, errK = rec.err_kpi;
+  $('#hour-tiles').innerHTML = [
+    ['Расход накопительно', fmt(rec.fact_cum_spend) + ' ₽', 'план к этому часу ' + fmt(rec.plan_cum_spend) + ' ₽ (' + (errS>0?'−':'+') + pct(Math.abs(errS)) + ')', 'fact'],
+    [KPI_RU[kpi] + ' накопительно', fmt(rec.fact_cum_kpi), 'план к этому часу ' + fmt(rec.plan_cum_kpi) + ' (' + (errK>0?'−':'+') + pct(Math.abs(errK)) + ')', 'fact'],
+    ['Заморозка к этому часу', fmt(z.hours[H-1].fact_cum_kpi), 'тот же мир, план буквально', ''],
+    ['Резерв бюджета', fmt(rec.reserve) + ' ₽', rec.reserve > 0 ? 'план выполняется, лишнее не тратим' : 'резерва нет', rec.reserve > 0 ? 'ok' : ''],
+  ].map(t=>`<div class="tile ${t[3]}"><span>${t[0]}</span><b>${t[1]}</b><span>${t[2]}</span></div>`).join('');
+  // графики: факт до текущего часа
+  for (const [id, key] of [['c-run-kpi','fact_cum_kpi'],['c-run-spend','fact_cum_spend']]) {
+    const ch = CHARTS[id]; ch.data.datasets[1].data = m.hours.map((h,i) => i < H ? h[key] : null); ch.data.datasets[2].data = z.hours.map((h,i) => i < H ? h[key] : null); ch.update('none');
+  }
+  // таблица часа
+  const channels = Object.keys(rec.by_channel);
+  $('#hour-table').innerHTML = `<thead><tr><th>Канал</th><th>Лимит, ₽</th><th>Запросы</th><th>Показы</th><th>Охват</th><th>Клики</th><th>Конв.</th><th>Расход, ₽</th><th>eCPM</th><th>Расход накопит.</th><th>${KPI_RU[kpi]} накопит.</th></tr></thead><tbody>` +
+    channels.map(c => { const s = rec.by_channel[c]; const dim = s.impressions === 0 && rec.caps[c] > 0; return `<tr class="${dim?'dim':''}"><td>${c}${dim?' · нет показов':''}</td><td>${fmt(rec.caps[c])}</td><td>${fmt(s.requests)}</td><td>${fmt(s.impressions)}</td><td>${fmt(s.unique_reach)}</td><td>${fmt(s.clicks)}</td><td>${fmt(s.conversions)}</td><td>${fmt(s.spend)}</td><td>${fmt(s.ecpm)}</td><td>${fmt(r.cum[c].spend[H-1])}</td><td>${fmt(r.cum[c].kpi[H-1])}</td></tr>`; }).join('') + '</tbody>';
+  // лента и карточки до текущего часа
+  const evs = m.hours.slice(0, H).flatMap(h => h.events);
+  $('#feed').innerHTML = evs.length ? evs.slice(-14).reverse().map(e => `<div>${e}</div>`).join('') : '<div class="muted">событий пока нет</div>';
+  const cards = m.proposals.filter(p => p.hour < H);
+  const who = p => { const d = (r.decisions||{})[p.hour]; if (p.applied_by === 'pending' && d === 'decline') return 'отклонил человек: деньги остались в ' + p.from_channel; return ({system:'применила система', human:'одобрил человек, применено', pending:'ждёт решения человека: выше лимита полномочий'})[p.applied_by]; };
+  const btns = p => (p.applied_by === 'pending' && !(r.decisions||{})[p.hour]) ? `<div class="row" style="margin-top:6px"><button class="small" onclick="decideProposal(${p.hour},'approve')">Одобрить ход</button><button class="small secondary" onclick="decideProposal(${p.hour},'decline')">Отклонить</button></div>` : '';
+  $('#cards').innerHTML = cards.length ? cards.slice(-4).reverse().map(p => `<div class="card ${p.applied_by==='pending'?'pending':''}"><b>Час ${p.hour}: перенести ${fmt(p.amount_rub)} ₽ из ${p.from_channel} в ${p.to_channel}</b><br>Причина: ${p.cause}<br>Цена решения: ${p.cost_of_decision}<br>Цена бездействия: ${p.cost_of_inaction}<br><span class="muted">${who(p)}</span>${btns(p)}</div>`).join('') : '<p class="muted">перераспределений пока не было</p>';
+  $('#digest').innerHTML = digest(r, H);
+  // стек по дням до текущего
+  const daysDone = Math.ceil(H/24);
+  const st = CHARTS['c-run-stack']; st.data.labels = Array.from({length: daysDone}, (_, i) => 'д' + (i+1));
+  st.data.datasets.forEach((ds, i) => { const c = channels[i]; ds.data = Array.from({length: daysDone}, (_, d) => { const slice = m.hours.slice(d*24, Math.min(d*24+24, H)); const tot = slice.reduce((s,h)=>s+Object.values(h.by_channel).reduce((a,b)=>a+b.spend,0),0); const own = slice.reduce((s,h)=>s+h.by_channel[c].spend,0); return tot ? own/tot*100 : 0; }); });
+  st.update('none');
+  if (H === N) { renderVerdict(r); renderSummary(r); } else { $('#run-verdict').innerHTML = ''; }
+}
+
+function togglePlay() {
+  if (PLAYER.timer) { stopPlayer(); return; }
+  if (PLAYER.h >= RUN.main.hours.length) PLAYER.h = 0;
+  $('#p-play').textContent = '⏸ Пауза';
+  PLAYER.timer = setInterval(() => { const next = Math.min(PLAYER.h + PLAYER.speed, RUN.main.hours.length); showHour(next); if (next >= RUN.main.hours.length) stopPlayer(); }, 250);
+}
+function stopPlayer() { if (PLAYER.timer) clearInterval(PLAYER.timer); PLAYER.timer = null; const b = $('#p-play'); if (b) b.textContent = '▶ Смотреть по часам'; }
+function nextEvent() { stopPlayer(); const nxt = RUN.eventHours.find(h => h > PLAYER.h); showHour(nxt || RUN.main.hours.length); }
+
+function digest(r, H) {
+  const m = r.main, rec = m.hours[H-1], N = m.hours.length, kpi = KPI_RU[r.verdict.kpi_name];
+  const timeShare = H / N, spendShare = rec.fact_cum_spend / r.verdict.promised_spend, kpiShare = rec.fact_cum_kpi / r.verdict.promised_kpi;
+  const day = Math.floor((H-1)/24) + 1;
+  const detected = Object.entries(r.verdict.detection_hours).filter(([,h]) => h <= H);
+  const pending = m.proposals.filter(p => p.hour < H && p.applied_by === 'pending' && !(r.decisions||{})[p.hour]);
+  const last = m.proposals.filter(p => p.hour < H).slice(-1)[0];
+  const advice = pending.length ? `нужно ваше решение по карточке часа ${pending[pending.length-1].hour}: сумма выше лимита полномочий автоматики`
+    : rec.status === 'fire' ? 'автоматика перераспределяет остаток, вмешательство не требуется; следите за карточкой'
+    : rec.status === 'watch' ? 'отклонение в зоне наблюдения, следующее перерешение в пределах 6 часов; ничего не делать'
+    : 'кампания идёт по плану, ничего делать не нужно';
+  return `<b>Сводка на день ${day}, час ${H}.</b> Прошло ${pct(timeShare,0)} времени, потрачено ${pct(spendShare,0)} бюджета, получено ${pct(kpiShare,0)} обещанных ${kpi}. `
+    + (detected.length ? `Детектор: ${detected.map(([c,h])=>c+' (час '+h+')').join(', ')}. ` : '')
+    + (last ? `Последний ход: час ${last.hour}, ${fmt(last.amount_rub)} ₽ из ${last.from_channel} в ${last.to_channel}. ` : '')
+    + (rec.reserve > 0 ? `В резерве ${fmt(rec.reserve)} ₽. ` : '')
+    + `<b>Что делать:</b> ${advice}.`;
+}
+
+async function decideProposal(hour, decision) {
+  const H = PLAYER.h; stopPlayer();
+  $('#decision-banner').innerHTML = '<p class="muted">пересчитываем кампанию с вашим решением на тех же случайных числах…</p>';
+  try {
+    const res = await api(`/api/run/${RUN.run_id}/decide`, {hour, decision});
+    const eff = res.effect; RUN = res; prepareRun(RUN); showHour(H);
+    const kpi = KPI_RU[RUN.verdict.kpi_name];
+    $('#decision-banner').innerHTML = decision === 'decline'
+      ? `<div class="verdict"><b>Ход часа ${hour} отклонён.</b> Деньги остались в канале-доноре; автоматика продолжит работать в пределах лимита.</div>`
+      : `<div class="verdict ${eff.kpi_delta >= 0 ? 'ok' : ''}"><b>Ход часа ${hour} одобрен. Цена решения по факту:</b> ${eff.kpi_delta >= 0 ? '+' : ''}${fmt(eff.kpi_delta)} ${kpi} и ${eff.spend_delta >= 0 ? '+' : ''}${fmt(eff.spend_delta)} ₽ к итогу кампании; отклонение по ${kpi} ${pct(eff.deviation_kpi_before)} → ${pct(eff.deviation_kpi_after)}. Тот же мир, те же случайные числа: разница только из-за вашего решения.</div>`;
+  } catch (e) { $('#decision-banner').innerHTML = '<p class="muted">Ошибка: ' + e.message + '</p>'; }
+}
+
+async function degradationTest() {
+  $('#btn-degrade').disabled = true;
+  const param = $('#shock_param').value || 'ctr', channel = $('#shock_channel').value || 'marketplace_1';
+  const mults = param === 'ecpm' ? [1, 1.5, 2, 3, 4] : [1, 0.8, 0.6, 0.4, 0.2];
+  const box = document.createElement('div'); box.innerHTML = '<p class="muted">усиливаем шок шаг за шагом, около 15 секунд…</p>'; $('#run-body').prepend(box);
+  try {
+    const d = await api('/api/degradation', {plan_id: PLAN.plan_id, world_seed: +$('#world_seed').value, channel_id: channel, parameter: param, start_hour: +$('#shock_hour').value, multipliers: mults, hold_plan: $('#hold_plan').value === 'true'});
+    const breakAt = d.rows.find(x => !x.withstands);
+    box.innerHTML = `<h3>Где ломается решение: ${param} в ${channel} с часа ${$('#shock_hour').value}, мир ${$('#world_seed').value}</h3>
+      <div class="two"><div class="chart"><canvas id="c-degrade"></canvas></div>
+      <div><table><thead><tr><th>Множитель</th><th>Наша: откл. KPI / расхода</th><th>Заморозка: откл. KPI / расхода</th><th>Детектор, час</th><th>Порог 20 %</th></tr></thead><tbody>${d.rows.map(x => `<tr><td>×${x.multiplier}</td><td>${pct(x.adaptive_dev_kpi)} / ${pct(x.adaptive_dev_spend)}</td><td>${pct(x.frozen_dev_kpi)} / ${pct(x.frozen_dev_spend)}</td><td>${x.detection_hour ?? '—'}</td><td>${x.withstands ? 'выдерживает' : 'не выдерживает'}</td></tr>`).join('')}</tbody></table>
+      <p class="muted">${breakAt ? `Решение перестаёт укладываться в порог кейса при множителе ×${breakAt.multiplier}: это честная граница применимости, а не дефект стенда.` : 'На этом диапазоне решение укладывается в порог кейса при любой силе шока.'}</p></div></div>`;
+    lineChart('c-degrade', d.rows.map(x => '×' + x.multiplier), [
+      {label: 'наша: отклонение KPI', data: d.rows.map(x => x.adaptive_dev_kpi * 100), borderColor: '#1F8A70', borderWidth: 2.5},
+      {label: 'заморозка: отклонение KPI', data: d.rows.map(x => x.frozen_dev_kpi * 100), borderColor: '#A9701A'},
+      {label: 'порог кейса', data: d.rows.map(() => d.threshold * 100), borderColor: '#9C3A2B', borderDash: [6,4]},
+    ], 'Отклонение KPI в конце кампании, %, при усилении шока');
+  } catch (e) { box.innerHTML = '<p class="muted">Ошибка: ' + e.message + '</p>'; }
+  $('#btn-degrade').disabled = false;
+}
+
+function renderVerdict(r) {
+  const v = r.verdict, m = r.main, kpi = KPI_RU[v.kpi_name];
+  const better = v.final_deviation_kpi <= v.frozen_final_deviation_kpi;
+  $('#run-verdict').innerHTML = `<div class="verdict ${v.within_threshold ? 'ok' : ''}"><b>Вердикт по кампании.</b> ${m.strategy}: отклонение в конце по расходу ${pct(v.final_deviation_spend)}, по ${kpi} ${pct(v.final_deviation_kpi)} (порог кейса ${pct(v.threshold,0)}: ${v.within_threshold?'выполнен':'не выполнен'}). Заморозка на том же мире: ${pct(v.frozen_final_deviation_spend)} / ${pct(v.frozen_final_deviation_kpi)}. ${better ? 'Мы ближе к плану по KPI.' : 'Заморозка оказалась ближе к плану по KPI в этом мире.'} MAPE по часам: расход ${pct(v.mape_spend)}, ${kpi} ${pct(v.mape_kpi)}. Детектор: ${Object.entries(v.detection_hours).map(([c,h])=>c+' в час '+h).join(', ')||'не срабатывал'}. Считалось ${v.runtime_seconds.toFixed(1)} с.</div>`;
+}
+
+function renderSummary(r) {
+  const m = r.main, z = r.frozen, v = r.verdict, kpi = KPI_RU[v.kpi_name];
+  $('#summary').hidden = false;
+  const N = m.hours.length;
+  const perChannel = PLAN.allocations.map(a => { const c = a.channel_id; const spend = r.cum[c] ? r.cum[c].spend[N-1] : 0; const got = r.cum[c] ? r.cum[c].kpi[N-1] : 0; const promised = allocKpi(a, v.kpi_name); return `<tr><td>${a.display_name}</td><td>${fmt(a.budget_rub)}</td><td>${fmt(spend)}</td><td>${pct((spend-a.budget_rub)/a.budget_rub)}</td><td>${fmt(promised)}</td><td>${fmt(got)}</td><td>${promised?pct((got-promised)/promised):'—'}</td></tr>`; }).join('');
+  const returned = v.returned_budget_rub;
+  $('#summary-body').innerHTML = `
+    <div class="verdict note"><b>Для рекламодателя.</b> Обещали ${fmt(v.promised_kpi)} ${kpi} за ${fmt(v.promised_spend)} ₽. Получили ${fmt(v.actual_kpi)} ${kpi} за ${fmt(v.actual_spend)} ₽${returned > 1000 ? `, ${fmt(returned)} ₽ не потрачены и возвращаются` : ''}. Если бы план исполнялся без изменений, было бы ${fmt(v.frozen_kpi)} ${kpi} за ${fmt(v.frozen_spend)} ₽.</div>
+    <div class="tiles">
+      <div class="tile"><span>Отклонение по расходу</span><b>${pct(v.final_deviation_spend)}</b><span>заморозка ${pct(v.frozen_final_deviation_spend)}</span></div>
+      <div class="tile"><span>Отклонение по ${kpi}</span><b>${pct(v.final_deviation_kpi)}</b><span>заморозка ${pct(v.frozen_final_deviation_kpi)}</span></div>
+      <div class="tile ${returned>1000?'ok':''}"><span>Возвращено бюджета</span><b>${fmt(returned)} ₽</b><span>план выполнен, лишнее не тратили</span></div>
+      <div class="tile"><span>${kpi} против заморозки</span><b>${(v.kpi_gain_vs_frozen>=0?'+':'')+fmt(v.kpi_gain_vs_frozen)}</b><span>≈ ${fmt(v.rub_saved_vs_frozen)} ₽ по плановой цене</span></div>
+      <div class="tile"><span>Ходов автоматики</span><b>${m.proposals.length}</b><span>обращений к человеку: ${v.human_requests}</span></div>
+    </div>
+    <h3>По каналам: обещали и получили</h3>
+    <div style="overflow:auto"><table><thead><tr><th>Канал</th><th>Бюджет по плану</th><th>Потрачено</th><th>Δ</th><th>${kpi} по плану</th><th>${kpi} получено</th><th>Δ</th></tr></thead><tbody>${perChannel}</tbody></table></div>
+    <h3>Хронология</h3>
+    <div class="feed">${m.hours.flatMap(h=>h.events).map(e=>`<div>${e}</div>`).join('') || '<div class="muted">событий не было</div>'}</div>`;
+}
+
+async function compareStrategies() {
+  $('#btn-compare').disabled = true;
+  const shock = $('#shock_channel').value ? {channel_id: $('#shock_channel').value, parameter: $('#shock_param').value, multiplier: +$('#shock_mult').value, start_hour: +$('#shock_hour').value} : null;
+  const box = document.createElement('div'); box.innerHTML = '<p class="muted">парные прогоны на 20 мирах, около минуты…</p>'; $('#run-body').prepend(box);
+  try {
+    const st = await api('/api/compare', {plan_id: PLAN.plan_id, scenario_id: $('#scenario').value, seeds: 20, shock, hold_plan: $('#hold_plan').value === 'true'});
+    const rows = Object.values(st).map(s => `<tr><td>${s.strategy}</td><td>${pct(s.mean.final_deviation_spend)} ± ${pct(s.ci95.final_deviation_spend)}</td><td>${pct(s.mean.final_deviation_kpi)} ± ${pct(s.ci95.final_deviation_kpi)}</td><td>${pct(s.mean.mape_spend)}</td><td>${pct(s.mean.mape_kpi)}</td><td>${fmt(s.mean_actual_kpi)}</td><td>${fmt(s.mean_actual_spend)}</td><td>${s.win_rate_vs_static.final_deviation_kpi!=null?pct(s.win_rate_vs_static.final_deviation_kpi,0):'—'}</td></tr>`).join('');
+    box.innerHTML = `<h3>Надёжность результата: 20 парных миров, одна лента случайности для всех стратегий</h3><table><thead><tr><th>Стратегия</th><th>Откл. расхода в конце</th><th>Откл. KPI в конце</th><th>MAPE расхода</th><th>MAPE KPI</th><th>KPI, среднее</th><th>Расход, среднее</th><th>Побед над заморозкой по KPI</th></tr></thead><tbody>${rows}</tbody></table><p class="muted">Один красивый мир не доказательство. Здесь средние с 95 % доверительным интервалом; план ${fmt(PLAN.total_kpi)} ${KPI_RU[PLAN.kpi_name]}.</p>`;
+  } catch (e) { box.innerHTML = '<p class="muted">Ошибка: ' + e.message + '</p>'; }
+  $('#btn-compare').disabled = false;
+}
+
+function destroy(id) { if (CHARTS[id]) { CHARTS[id].destroy(); delete CHARTS[id]; } }
+function lineChart(id, labels, datasets, title, plugins=[]) {
+  destroy(id);
+  CHARTS[id] = new Chart($('#' + id), {type: 'line', data: {labels, datasets: datasets.map(d => ({pointRadius: 0, borderWidth: 1.5, tension: 0.15, spanGaps: false, ...d}))},
+    options: {responsive: true, maintainAspectRatio: false, animation: false, interaction: {mode: 'index', intersect: false},
+      plugins: {title: {display: true, text: title}, legend: {position: 'bottom', labels: {boxWidth: 10}}},
+      scales: {x: {ticks: {maxTicksLimit: 12, callback: (v, i) => (i % 24 === 0 ? 'д' + (i/24 + 1) : '')}}, y: {beginAtZero: true}}}, plugins});
+}
+init();
+</script>
+</body>
+</html>
