@@ -1,0 +1,174 @@
+# Реестр констант мозга: планировщик, оценщик, детектор, контроллер.
+#
+# ПРАВИЛО ПРОЕКТА: ни одного числа из головы. У каждой константы либо
+# публичный источник (status: sourced, source_url), либо пометка
+# status: calibrated со ссылкой на тест, который её проверяет.
+# tests/test_provenance.py падает, если у константы нет происхождения.
+
+meta:
+  version: "0.1.0"
+
+planner:
+  allocation_steps:
+    value: 1000
+    status: calibrated
+    test: "tests/test_planner.py::test_allocation_stable_under_finer_steps"
+    note: "порций наливания; при удвоении план меняется менее чем на 1 %"
+  model_grid_size:
+    value: 160
+    status: calibrated
+    test: "tests/test_planner.py::test_allocation_stable_under_finer_steps"
+    note: "точек сетки функции «бюджет → результат» канала"
+  corridor_sigma_divisor:
+    value: 1.2816
+    status: sourced
+    source_url: "https://en.wikipedia.org/wiki/Standard_normal_table"
+    note: "диапазон каталога трактуем как P10–P90; z(0.90) = 1.2816, коридор ±1σ"
+  economics_tail_multiplier:
+    value: 3.0
+    status: calibrated
+    test: "tests/test_planner.py::test_type_b_diagnoses_binding_constraint"
+    note: "хвост кривой дороже бенчмарка в разы = связывает экономика, а не ёмкость"
+
+curves:
+  saturation_tolerance:
+    value: 0.97
+    status: calibrated
+    test: "tests/test_curves.py::test_curve_saturates_where_cap_stops_binding"
+    note: "расход ниже 97 % лимита = лимит не связывал, дальше потолок"
+  prior_impressions:
+    value: 20000
+    status: calibrated
+    test: "tests/test_curves.py::test_rates_are_prior_smoothed"
+    note: "вес приора CTR в показах: около одного дня трафика среднего канала"
+  prior_clicks:
+    value: 200
+    status: calibrated
+    test: "tests/test_curves.py::test_rates_are_prior_smoothed"
+    note: "вес приора CVR в кликах; практика Директа: автостратегия не учится при < 10 конверсий в неделю (https://habr.com/ru/articles/1061240/)"
+
+retro:
+  levels:
+    value: [0.01, 0.03, 0.08, 0.15, 0.3, 0.6, 1.2]
+    status: calibrated
+    test: "tests/test_curves.py::test_curve_saturates_where_cap_stops_binding"
+    note: "лестница дневных лимитов как доли верхней оценки расхода канала; верхние уровни заведомо выше потолка"
+  world_seeds:
+    value: [1001, 1002, 1003]
+    status: calibrated
+    test: "tests/test_isolation.py::test_plan_independent_of_world_seed"
+    note: "три прошлые кампании; их зёрна не пересекаются с зёрнами оцениваемых кампаний"
+  public_contacts_per_user:
+    value: 3.0
+    status: calibrated
+    test: "tests/test_world_behaviour.py::test_demo_plan_buys_about_half_of_inventory"
+    note: "публичная оценка контактов на уникума в сутки для верхней границы лестницы (config/assumptions.yaml, contacts_per_user_per_day)"
+
+detector:
+  window_hours:
+    value: 24
+    status: sourced
+    source_url: "https://improvado.io/blog/campaign-monitoring-and-anomaly-detection"
+    note: "практика мониторинга: сравнение «сегодня против недавних дней»; сутки гасят суточный профиль"
+  baseline_hours:
+    value: 72
+    status: calibrated
+    test: "tests/test_executor.py::test_detector_silent_without_shock"
+    note: "база из предыдущих трёх суток: достаточно кликов и ещё не ушла усталость"
+  drop_threshold:
+    value: 0.30
+    status: sourced
+    source_url: "https://improvado.io/blog/campaign-monitoring-and-anomaly-detection"
+    note: "падение CTR на 30–40 % считается аномалией и предвестником роста CPA; берём нижнюю границу"
+  min_clicks:
+    value: 100
+    status: calibrated
+    test: "tests/test_executor.py::test_detector_silent_without_shock"
+    note: "пуассоновский разброс суточной отдачи при 100 кликах около 10 %, порог 30 % это 3σ"
+  confirm_hours:
+    value: 12
+    status: calibrated
+    test: "tests/test_executor.py::test_detector_silent_without_shock"
+    note: "падение должно держаться полсуток подряд, иначе один неудачный час или день считается шумом"
+  discount_on_shock:
+    value: 0.15
+    status: calibrated
+    test: "tests/test_executor.py::test_estimates_reset_after_shock"
+    note: "после срабатывания от накопленной статистики канала остаётся 15 %: оценка разворачивается за часы, а не за неделю"
+  shock_status_hours:
+    value: 24
+    status: calibrated
+    test: "tests/test_executor.py::test_detector_catches_ctr_drop"
+    note: "сколько часов после срабатывания канал считается «в пожаре»; потом новый режим принят как норма"
+
+controller:
+  dead_zone:
+    value: 0.03
+    status: calibrated
+    test: "tests/test_executor.py::test_adaptive_beats_static_without_shock"
+    note: "мёртвая зона ошибки темпа; форма из arXiv:2509.25429 (допуск ε), значение калибруется"
+  error_bands:
+    value: [[0.03, 0.05], [0.10, 0.10], [0.25, 0.20]]
+    status: calibrated
+    test: "tests/test_executor.py::test_adaptive_beats_static_without_shock"
+    note: "банды |E| → шаг множителя; средний шаг 10 % совпадает с правилом LinkedIn ×1.1/×0.9 (KDD'14)"
+  lambda_bounds:
+    value: [0.2, 5.0]
+    status: calibrated
+    test: "tests/test_executor.py::test_adaptive_beats_static_without_shock"
+    note: "anti-windup множителя темпа; ориентир: диапазон корректировок ставок площадок от −90 % до +300 %"
+  replan_every_hours:
+    value: 6
+    status: calibrated
+    test: "tests/test_executor.py::test_full_run_is_fast"
+    note: "перерешение раз в 6 часов и по событию: компромисс скорости и качества"
+  share_rate_limit:
+    value: 0.30
+    status: sourced
+    source_url: "https://developers.google.com/meridian/docs/user-guide/budget-optimization-scenarios"
+    note: "Meridian: spend_constraint_lower/upper по умолчанию ±30 % от текущей доли канала"
+  pause_after_hours:
+    value: 3
+    status: calibrated
+    test: "tests/test_executor.py::test_paused_channel_is_evacuated"
+    note: "часов без показов при ненулевом лимите, после которых канал считаем недоступным"
+  probe_share:
+    value: 0.10
+    status: sourced
+    source_url: "http://www0.cs.ucl.ac.uk/staff/w.zhang/rtb-papers/linkedin-pacing.pdf"
+    note: "LinkedIn: медленный старт с 10 % от полного темпа; тем же щупаем недоступный канал"
+  proposal_min_share:
+    value: 0.05
+    status: calibrated
+    test: "tests/test_executor.py::test_paused_channel_is_evacuated"
+    note: "ход меньше 5 % остатка в карточку не попадает: шум, а не решение"
+  replan_grid_size:
+    value: 48
+    status: calibrated
+    test: "tests/test_executor.py::test_full_run_is_fast"
+  replan_steps:
+    value: 300
+    status: calibrated
+    test: "tests/test_executor.py::test_full_run_is_fast"
+  reserve_warmup_hours:
+    value: 96
+    status: calibrated
+    test: "tests/test_executor.py::test_adaptive_beats_static_without_shock"
+    note: "резерв бюджета включается после четырёх суток: раньше опережение по KPI это шум первых дней, а не свойство мира"
+  reserve_step_share:
+    value: 0.05
+    status: calibrated
+    test: "tests/test_executor.py::test_adaptive_beats_static_without_shock"
+    note: "резерв меняется не более чем на 5 % остатка за перерешение, иначе темп колеблется (docs/decisions.md, запись 24)"
+  pid_gains:
+    value: [1.0, 0.02, 0.3]
+    status: calibrated
+    test: "tests/test_executor.py::test_baselines_complete_episode"
+    note: "Kp, Ki, Kd для baseline PID; baseline, не наш метод"
+
+metrics:
+  mape_warmup_share:
+    value: 0.05
+    status: sourced
+    source_url: "https://arxiv.org/abs/2503.06942"
+    note: "MAPE нестабилен около нуля; первые 5 % часов исключаем, рядом считаем WAPE"

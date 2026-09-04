@@ -1,0 +1,213 @@
+# Реестр публичных бенчмарков.
+#
+# ПРАВИЛО ПРОЕКТА: ни одного числа из головы. У каждого значения есть либо
+# source_url на публичный источник, либо status: calibrated и ссылка на тест
+# или ноутбук, который это значение получил.
+#
+# Каналы в интерфейсе абстрактные. Российские площадки указаны только как
+# происхождение диапазона (proxy_for) и никогда не показываются пользователю:
+# кейс прямо запрещает выдавать модельные метрики за статистику конкретной сети.
+
+meta:
+  version: "0.1.0"
+  currency: RUB
+  statuses:
+    sourced: "значение взято из публичного источника, ссылка обязательна"
+    calibrated: "получено нашей калибровкой, ссылка на тест обязательна"
+    needs_source: "заглушка, использовать в расчётах запрещено"
+
+market_context:
+  # Для слайда про масштаб боли, в расчётах не участвует.
+  internet_ad_market_2025_rub:
+    value: 1.569e12
+    status: sourced
+    source_url: "https://interactivead.ru/news/arir-obem-rossijskogo-rynka-reklamy-i-prodvizheniya-v-internete-v-2025-godu-vyros-na-28-do-1569-trln-rublej/"
+    note: "АРИР, рост +28% к 2024"
+  retail_media_2025_rub:
+    value: 5.80e11
+    status: sourced
+    source_url: "https://www.sostav.ru/publication/trendy-retejl-media-v-tsifrakh-itogi-2025-goda-80513.html"
+    note: "крупнейший сегмент, +58% год к году"
+
+# --- Три социальные сети -----------------------------------------------------
+# Разные форматы одной экосистемы дают честно различающиеся CTR и цену.
+# Источник квартилей: медианы и квартили по форматам, апрель 2026.
+
+channels:
+  social_video:
+    kind: social
+    display_name: "Соцсеть · вертикальное видео"
+    proxy_for: "VK Ads, формат «клипы»"
+    cpm_rub:
+      value: 113.90
+      status: sourced
+      period: "Q2 2026"
+      source_url: "https://blog.click.ru/analytics/issledovanie-klyuchevyh-pokazateley-internet-reklamy/"
+      note: "Пульс click.ru, обезличенные данные кампаний платформы; +33% год к году"
+    ctr:
+      value: 0.018
+      p25: 0.007
+      p75: 0.028
+      status: sourced
+      period: "апрель 2026"
+      source_url: "https://dipustovalov.ru/benchmarks/ctr-vk-ads-2026"
+      note: "медиана по формату «клипы»; выборка 4-6 источников на формат, ретаргетинг исключён"
+    vtr:
+      value: null
+      status: needs_source
+      note: "нужен публичный бенчмарк VTR для вертикального видео"
+    cr:
+      value: null
+      status: needs_source
+      note: "калибруем от CPA-бенчмарков либо ищем источник"
+
+  social_feed:
+    kind: social
+    display_name: "Соцсеть · лента и истории"
+    proxy_for: "VK Ads, универсальное объявление"
+    cpm_rub:
+      value: 113.90
+      status: sourced
+      period: "Q2 2026"
+      source_url: "https://blog.click.ru/analytics/issledovanie-klyuchevyh-pokazateley-internet-reklamy/"
+    ctr:
+      value: 0.008
+      p25: 0.004
+      p75: 0.012
+      status: sourced
+      period: "апрель 2026"
+      source_url: "https://dipustovalov.ru/benchmarks/ctr-vk-ads-2026"
+      note: "медиана формата «универсальное (Stories+Feed)»"
+    cr:
+      value: null
+      status: needs_source
+
+  social_banner:
+    kind: social
+    display_name: "Соцсеть · текстово-графический блок"
+    proxy_for: "VK Ads, ТГБ"
+    cpm_rub:
+      value: 85.54
+      status: sourced
+      period: "Q2 2025"
+      source_url: "https://blog.click.ru/analytics/issledovanie-klyuchevyh-pokazateley-internet-reklamy/"
+      note: "берём прошлогодний уровень как более дешёвый инвентарь низкого CTR"
+    ctr:
+      value: 0.005
+      p25: 0.002
+      p75: 0.009
+      status: sourced
+      period: "апрель 2026"
+      source_url: "https://dipustovalov.ru/benchmarks/ctr-vk-ads-2026"
+      note: "медиана формата «текстово-графический баннер»"
+    cr:
+      value: null
+      status: needs_source
+
+# --- Programmatic ------------------------------------------------------------
+  programmatic:
+    kind: programmatic
+    display_name: "Programmatic · сети"
+    proxy_for: "рекламные сети поисковой системы (РСЯ) как ближайший открытый аналог"
+    cpm_rub:
+      value: 102.61
+      status: sourced
+      period: "Q2 2026"
+      source_url: "https://blog.click.ru/analytics/issledovanie-klyuchevyh-pokazateley-internet-reklamy/"
+      note: "+16.2% год к году"
+    ctr:
+      value: 0.012
+      status: sourced
+      period: "Q2 2026"
+      source_url: "https://blog.click.ru/analytics/issledovanie-klyuchevyh-pokazateley-internet-reklamy/"
+    cpc_rub:
+      value: 8.56
+      status: sourced
+      period: "Q2 2026"
+      source_url: "https://blog.click.ru/analytics/issledovanie-klyuchevyh-pokazateley-internet-reklamy/"
+      note: "контрольное значение: cpm/1000/ctr должно давать примерно это же"
+    cr:
+      value: null
+      status: needs_source
+
+# --- Три маркетплейса --------------------------------------------------------
+  marketplace_cpc:
+    kind: marketplace
+    display_name: "Маркетплейс · оплата за клик"
+    proxy_for: "Ozon, продвижение карточки"
+    cpc_rub:
+      value: 17.5
+      range: [10.0, 25.0]
+      status: sourced
+      period: "2026"
+      source_url: "https://uniseller.io/blog/skolko-stoit-prodvizhenie-kartochki-na-ozon-v-2026/"
+      note: "типовой диапазон вне узких категорий; электроника 18-35, мебель 25-50"
+    ctr:
+      value: null
+      status: needs_source
+      note: "нужен источник по CTR карточки в выдаче маркетплейса"
+    cr:
+      value: null
+      status: needs_source
+
+  marketplace_cpm:
+    kind: marketplace
+    display_name: "Маркетплейс · оплата за показы"
+    proxy_for: "Wildberries, аукцион"
+    cpm_rub:
+      value: 90.0
+      range: [40.0, 500.0]
+      status: sourced
+      period: "2026"
+      source_url: "https://uniseller.io/blog/cpm-v-reklame-wildberries-kak-rabotaet/"
+      note: "минимум от 40; до 500 в конкурентных категориях"
+    ctr:
+      value: null
+      status: needs_source
+
+  marketplace_premium:
+    kind: marketplace
+    display_name: "Маркетплейс · премиальные позиции"
+    proxy_for: "Wildberries, слайдер/премиум-места"
+    cpm_rub:
+      value: 140.0
+      status: sourced
+      period: "2026"
+      source_url: "https://mpmgr.ru/blog/ads-promotion/auktsion-reklamy-wildberries"
+      note: "стартовая ставка премиальных позиций; минимальный бюджет входа 100 000 ₽"
+    ctr:
+      value: null
+      status: needs_source
+
+# --- SMS ---------------------------------------------------------------------
+  sms:
+    kind: sms
+    display_name: "SMS · пакетные отправки"
+    price_per_message_rub:
+      value: 3.5
+      range: [1.9, 6.0]
+      status: sourced
+      period: "2025-2026"
+      source_url: "https://smsint.ru/prices/"
+      source_url_secondary: "https://mediarik.ru/blog/skolko-stoit-rassylka-sms-v-2025-godu/"
+      note: "нижняя граница — массовые тарифы, верхняя — розничные оценки 2025"
+    deliverability:
+      value: 0.966
+      status: sourced
+      source_url: "https://sakari.io/blog/sms-marketing-benchmarks-2025-performance-metrics-and-industry-insights"
+      note: "международный бенчмарк; российских публичных данных не нашли"
+    ctr:
+      value: 0.124
+      status: sourced
+      source_url: "https://www.omnisend.com/blog/sms-marketing-statistics/"
+      note: "международный бенчмарк, кампанийные рассылки"
+    cr:
+      value: null
+      status: needs_source
+
+# --- Что ещё нужно найти или откалибровать -----------------------------------
+open_questions:
+  - "CR по всем каналам: публичных российских бенчмарков не нашли. Варианты: вывести из CPA-бенчмарков либо задать как калибруемый параметр с явной пометкой."
+  - "CTR карточки в выдаче маркетплейса: источник не найден."
+  - "VTR для видеоформатов: источник не найден."
+  - "Доставляемость и CTR SMS взяты из международных источников — отметить в README как допущение."
