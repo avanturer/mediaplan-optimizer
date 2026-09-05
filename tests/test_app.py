@@ -122,7 +122,7 @@ def test_decide_rejects_hour_without_card(client):
 @pytest.mark.parametrize(
     ("body", "fragment"),
     [
-        ({"mode": "A", "budget_rub": 1_000_000, "horizon_days": 0}, "горизонт"),
+        ({"mode": "A", "budget_rub": 1_000_000, "horizon_days": 0}, "срок"),
         ({"mode": "A", "budget_rub": 0}, "бюджет"),
         ({"mode": "B", "target_kpi": "clicks"}, "целевой объём"),
         ({"mode": "A", "preset": "nope", "budget_rub": 1_000_000}, "пресет"),

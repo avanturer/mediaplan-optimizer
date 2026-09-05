@@ -83,12 +83,12 @@ BINDING_TITLES = {
 # Русские подписи для ошибок валидации: человек видит поле и правило, а не путь pydantic.
 RU_FIELDS = {
     "budget_rub": "бюджет",
-    "horizon_days": "горизонт",
+    "horizon_days": "срок",
     "target_value": "целевой объём",
     "target_kpi": "KPI",
     "channel_ids": "набор каналов",
     "max_cpa_rub": "потолок CPA",
-    "automation_limit_rub": "лимит автоматики",
+    "automation_limit_rub": "лимит на один перенос",
     "multiplier": "сила шока",
     "start_hour": "час шока",
     "duration_hours": "длительность шока",
@@ -103,7 +103,7 @@ RU_FIELDS = {
     "plan_id": "план",
     "hour": "час",
     "decision": "решение",
-    "mode": "постановка",
+    "mode": "задача",
     "objective": "что максимизируем",
     "shocks": "свои шоки",
 }
@@ -356,7 +356,7 @@ def approve_plan(plan_id: str) -> dict[str, Any]:
 def _check_plan_usable(media_plan: MediaPlan) -> None:
     """Достижимость и непустота проверяются раньше утверждения: иначе совет «утвердите план» бессмыслен."""
     if not media_plan.is_feasible:
-        raise HTTPException(409, "план недостижим: примените один из предложенных ходов и утвердите новый план")
+        raise HTTPException(409, "план недостижим: примените один из предложенных вариантов и утвердите новый план")
     if media_plan.total_budget_rub <= 0 or media_plan.total_kpi <= 0:
         raise HTTPException(409, "план пуст: ни один канал не проходит потолок CPA — поднимите потолок или уберите его")
 
@@ -417,10 +417,10 @@ def decide(run_id: str, req: DecideRequest) -> dict[str, Any]:
     prev_view, prev_req = stored["view"], stored["request"]
     hours_with_cards = {p["hour"] for p in prev_view["main"]["proposals"]}
     if req.hour not in hours_with_cards:
-        raise HTTPException(422, f"в час {req.hour} карточки хода нет")
+        raise HTTPException(422, f"в час {req.hour} карточки переноса нет")
     decisions = {int(k): v for k, v in prev_view["decisions"].items()}
     if req.decision == "decline" and req.hour in prev_req.approved_hours:
-        raise HTTPException(422, f"ход часа {req.hour} уже применён по вашему решению; отменить его можно только новым прогоном")
+        raise HTTPException(422, f"перенос часа {req.hour} уже сделан по вашему решению; отменить его можно только новым прогоном")
     decisions[req.hour] = req.decision
     if req.decision == "decline":
         prev_view["decisions"] = decisions
@@ -495,7 +495,7 @@ def compare(req: CompareRequest) -> dict[str, Any]:
 
 @app.post("/api/stress")
 def stress(req: StressRequest) -> dict[str, Any]:
-    """Стресс-тест плана до запуска: все сценарии шоков на одном мире, наша стратегия против заморозки."""
+    """Стресс-тест плана до запуска: все сценарии шоков на одном мире, наша стратегия против плана без изменений."""
     media_plan = _plan(req.plan_id)
     _check_plan_usable(media_plan)
     seeds = SeedBundle(catalog_seed=0, world_seed=req.world_seed, noise_seed=10_000 + req.world_seed)
@@ -575,7 +575,7 @@ def _plan_view(media_plan: MediaPlan) -> dict[str, Any]:
             # планировщик предлагает сроки без оглядки на калибровку мира; кабинет не примет горизонт длиннее MAX_HORIZON_DAYS
             too_long = s["changed_field"] == "horizon_days" and s["suggested_value"] is not None and s["suggested_value"] > MAX_HORIZON_DAYS
             s["applicable"] = not too_long
-            s["why_not"] = f"дольше {MAX_HORIZON_DAYS} дней: за пределами калибровки мира" if too_long else None
+            s["why_not"] = f"дольше {MAX_HORIZON_DAYS} дней: за пределами калибровки" if too_long else None
         data["infeasibility"]["binding_title"] = BINDING_TITLES.get(media_plan.infeasibility.binding_constraint.value, media_plan.infeasibility.binding_constraint.value)
     data["is_empty"] = media_plan.is_feasible and (media_plan.total_budget_rub <= 0 or media_plan.total_kpi <= 0)
     return data
@@ -605,7 +605,7 @@ def _run_view(summary: RunSummary) -> dict[str, Any]:
 
 
 def _twin_view(twin: RunSummary) -> dict[str, Any]:
-    """Двойник-заморозка: только то, что рисует кабинет, без мегабайтов почасовых таблиц."""
+    """Двойник «план без изменений»: только то, что рисует кабинет, без мегабайтов почасовых таблиц."""
     return {
         "strategy": twin.strategy,
         "actual_kpi": twin.actual_kpi,
