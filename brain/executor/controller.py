@@ -27,6 +27,7 @@ from brain.assumptions import campaign_audience_multiplier, fatigue_delta
 from brain.config import (
     CARD_MIN_INTERVAL_HOURS,
     DEAD_ZONE,
+    DETECTOR_MIN_EXPECTED_EVENTS,
     ERROR_BANDS,
     LAMBDA_MAX,
     LAMBDA_MIN,
@@ -130,7 +131,7 @@ class BaseExecutor:
                 new_events.append(f"час {obs.hour}: детектор: {what} в канале {cid} упали, оценки сброшены")
         for cid in self.channel_ids:
             est = self.estimates[cid]
-            if est.hours_without_delivery == PAUSE_AFTER_HOURS and self.last_caps.get(cid, 0.0) > 0:
+            if est.hours_without_delivery == PAUSE_AFTER_HOURS and self._cap_is_meaningful(cid, obs.hour - 1):
                 # пауза канала это слом: попадает в детектор и поднимает статус, как и падение отдачи
                 est.mark_paused(obs.hour)
                 self.detection_hours.setdefault(cid, obs.hour)
@@ -209,7 +210,7 @@ class BaseExecutor:
 
     def _channel_status(self, cid: str, cap: float) -> ChannelStatus:
         est = self.estimates[cid]
-        if est.hours_without_delivery >= PAUSE_AFTER_HOURS and self.last_caps.get(cid, 0) > 0:
+        if est.hours_without_delivery >= PAUSE_AFTER_HOURS and self._cap_is_meaningful(cid, self.hour - 1):
             return ChannelStatus.PAUSED
         if cap <= 0 and self.plan_budget[cid] > 0:
             return ChannelStatus.FROZEN_CAPACITY
@@ -221,6 +222,20 @@ class BaseExecutor:
             return "по плану канал в этот час не работает"
         ratio = cap / planned if planned > 0 else 0.0
         return f"лимит {cap:,.0f} ₽ против плановых {planned:,.0f} ₽ (×{ratio:.2f})"
+
+    def _cap_is_meaningful(self, cid: str, hour_index: int) -> bool:
+        """Лимит часа позволял купить хотя бы десяток показов по кривой: иначе тишина канала это не пауза.
+
+        Урезанный до копеек канал (SMS по 13 ₽ в час при цене 3,7 ₽ за сообщение)
+        отдаёт ноль показов по арифметике, а не потому что сломался.
+        """
+        cap = self.last_caps.get(cid, 0.0)
+        if cap <= 0:
+            return False
+        curve = self.curves[cid]
+        share = curve.hourly_share(max(hour_index, 0))
+        expected = curve.impressions_at(cap / share) * share if share > 0 else 0.0
+        return expected >= DETECTOR_MIN_EXPECTED_EVENTS
 
     def _plan_daily(self, cid: str) -> float:
         return self.plan_budget[cid] / max(self.horizon / 24, 1.0)
@@ -349,7 +364,7 @@ class AdaptiveExecutor(BaseExecutor):
             self.frozen_donors.difference_update(fired)
         for cid in self.channel_ids:
             est = self.estimates[cid]
-            if est.hours_without_delivery >= PAUSE_AFTER_HOURS and self.last_caps.get(cid, 0.0) > 0:
+            if est.hours_without_delivery >= PAUSE_AFTER_HOURS and self._cap_is_meaningful(cid, self.hour - 1):
                 if cid not in self.unavailable:
                     self.unavailable.add(cid)
                     self.pending_replan = True
