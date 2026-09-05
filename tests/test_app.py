@@ -164,3 +164,67 @@ def test_unknown_plan_is_404_not_500(client):
     r = client.post("/api/run", json={"plan_id": "deadbeef"})
     assert r.status_code == 404
     assert r.headers["content-type"].startswith("application/json")
+
+
+def test_custom_shocks_list_and_legacy_single_field(client):
+    plan = _approved_plan(client, DEMO1)
+    pid = plan["plan_id"]
+    two = [
+        {"channel_id": "sms", "parameter": "cvr", "multiplier": 0.5, "start_hour": 0},
+        {"channel_id": "programmatic", "parameter": "ecpm", "multiplier": 2, "start_hour": 240},
+    ]
+    r = client.post("/api/run", json={"plan_id": pid, "shocks": two})
+    assert r.status_code == 200, r.text
+    run = r.json()
+    assert sorted(run["main"]["shock_hours"]) == [0, 240]
+    assert [s["channel_id"] for s in run["custom_shocks"]] == ["sms", "programmatic"]
+    legacy = client.post("/api/run", json={"plan_id": pid, "shock": {"channel_id": "sms", "start_hour": 24}}).json()
+    assert [s["channel_id"] for s in legacy["custom_shocks"]] == ["sms"]
+    r = client.post("/api/run", json={"plan_id": pid, "shocks": [{"channel_id": "sms"}] * 4})
+    assert r.status_code == 422
+    assert "не больше 3" in r.json()["detail"]
+
+
+def test_empty_plan_cannot_be_approved(client):
+    plan = _plan(client, {**DEMO1, "max_cpa_rub": 10})  # потолок ниже любого канала: все бюджеты нулевые
+    assert plan["is_empty"] is True and plan["total_budget_rub"] == 0
+    r = client.post(f"/api/plan/{plan['plan_id']}/approve")
+    assert r.status_code == 409
+    assert "пуст" in r.json()["detail"]
+
+
+def test_suggestion_beyond_cabinet_horizon_is_marked_not_applicable(client):
+    plan = _plan(client, {"mode": "B", "preset": "narrow", "target_kpi": "clicks", "target_value": 90_000, "horizon_days": 21})
+    sug = {s["changed_field"]: s for s in plan["infeasibility"]["suggestions"]}
+    horizon = sug["horizon_days"]
+    assert horizon["suggested_value"] > 30
+    assert horizon["applicable"] is False and "30" in horizon["why_not"]
+    assert all(s["applicable"] for f, s in sug.items() if f != "horizon_days")
+
+
+def test_infeasible_plan_run_explains_infeasibility_not_approval(client):
+    plan = _plan(client, DEMO2)
+    r = client.post("/api/run", json={"plan_id": plan["plan_id"]})
+    assert r.status_code == 409
+    assert "недостижим" in r.json()["detail"]
+
+
+def test_decide_approve_reruns_and_decline_after_approve_is_rejected(client):
+    plan = _approved_plan(client, DEMO1)
+    run = client.post("/api/run", json={"plan_id": plan["plan_id"], "scenario_id": "channel_pause"}).json()
+    pending = [p["hour"] for p in run["main"]["proposals"] if p["applied_by"] == "pending"]
+    assert pending, "в демо-плане с лимитом 100 000 ₽ должна быть карточка, ждущая решения"
+    r = client.post(f"/api/run/{run['run_id']}/decide", json={"hour": pending[0], "decision": "approve"})
+    assert r.status_code == 200, r.text
+    after = r.json()
+    assert after["run_id"] != run["run_id"] and after["effect"]["hour"] == pending[0]
+    assert any(p["hour"] == pending[0] and p["applied_by"] == "human" for p in after["main"]["proposals"])
+    r = client.post(f"/api/run/{after['run_id']}/decide", json={"hour": pending[0], "decision": "decline"})
+    assert r.status_code == 422
+
+
+def test_static_strategy_twin_equals_main(client):
+    plan = _approved_plan(client, DEMO1)
+    run = client.post("/api/run", json={"plan_id": plan["plan_id"], "strategy": "static"}).json()
+    assert run["frozen"]["actual_kpi"] == run["verdict"]["actual_kpi"]
+    assert len(run["frozen"]["hours"]) == len(run["main"]["hours"])

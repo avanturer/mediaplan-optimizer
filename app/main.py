@@ -22,7 +22,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError, model_validator
 
 from brain.curves import ResponseCurve, build_curves
 from brain.planner import plan as build_plan
@@ -42,8 +42,9 @@ from world import SCENARIOS, build_catalog
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 CASE_DEVIATION_THRESHOLD = 0.20  # порог приёмки кейса: отклонение в конце не более 20 %
-MAX_RUNS_IN_MEMORY = 20  # прогон весит мегабайты; держим только последние
+MAX_RUNS_IN_MEMORY = 50  # прогон весит около мегабайта; каждое «Перенести» создаёт новый
 MAX_HORIZON_DAYS = 30  # кейс: 14–21 день; мир откалиброван на этот масштаб
+MAX_CUSTOM_SHOCKS = 3  # своих шоков за прогон; harness принимает список любой длины
 
 Strategy = Literal["static", "proportional_pacing", "pid", "adaptive"]
 STRATEGY_TITLES = {
@@ -103,6 +104,8 @@ RU_FIELDS = {
     "hour": "час",
     "decision": "решение",
     "mode": "постановка",
+    "objective": "что максимизируем",
+    "shocks": "свои шоки",
 }
 RU_RULES = {
     "greater_than": "должно быть больше {gt}",
@@ -212,13 +215,27 @@ class ShockRequest(BaseModel):
     duration_hours: int | None = Field(default=None, ge=1)
 
 
-class RunRequest(BaseModel):
+class ShocksMixin(BaseModel):
+    """Свои шоки списком; старое одиночное поле `shock` принимается и переносится в список."""
+
+    shock: ShockRequest | None = None
+    shocks: list[ShockRequest] = Field(default_factory=list, max_length=MAX_CUSTOM_SHOCKS)
+
+    @model_validator(mode="after")
+    def _merge_single_shock(self):
+        if self.shock is not None and not self.shocks:
+            self.shocks = [self.shock]
+        if len(self.shocks) > MAX_CUSTOM_SHOCKS:
+            raise ValueError(f"своих шоков не больше {MAX_CUSTOM_SHOCKS}")
+        return self
+
+
+class RunRequest(ShocksMixin):
     plan_id: str
     strategy: Strategy = "adaptive"
     scenario_id: str = "stable"
     world_seed: int = 1
     noise_seed: int | None = Field(default=None, description="по умолчанию 10000 + зерно мира")
-    shock: ShockRequest | None = None
     auto_apply_above_limit: bool = False
     hold_plan: bool = True
     approved_hours: list[int] = Field(default_factory=list)
@@ -240,11 +257,10 @@ class DegradationRequest(BaseModel):
     auto_apply_above_limit: bool = False
 
 
-class CompareRequest(BaseModel):
+class CompareRequest(ShocksMixin):
     plan_id: str
     scenario_id: str = "stable"
     seeds: int = Field(default=20, ge=2, le=30)
-    shock: ShockRequest | None = None
     hold_plan: bool = True
 
 
@@ -330,11 +346,18 @@ def get_plan(plan_id: str) -> dict[str, Any]:
 @app.post("/api/plan/{plan_id}/approve")
 def approve_plan(plan_id: str) -> dict[str, Any]:
     media_plan = _plan(plan_id)
-    if not media_plan.is_feasible:
-        raise HTTPException(409, "недостижимый план нельзя утвердить: примените один из предложенных ходов")
+    _check_plan_usable(media_plan)
     # план неизменяем по id, поэтому утверждение идемпотентно: версия одна
     state.approved.setdefault(plan_id, 1)
     return {"plan_id": plan_id, "approved_version": state.approved[plan_id]}
+
+
+def _check_plan_usable(media_plan: MediaPlan) -> None:
+    """Достижимость и непустота проверяются раньше утверждения: иначе совет «утвердите план» бессмыслен."""
+    if not media_plan.is_feasible:
+        raise HTTPException(409, "план недостижим: примените один из предложенных ходов и утвердите новый план")
+    if media_plan.total_budget_rub <= 0 or media_plan.total_kpi <= 0:
+        raise HTTPException(409, "план пуст: ни один канал не проходит потолок CPA — поднимите потолок или уберите его")
 
 
 @app.post("/api/run")
@@ -344,13 +367,12 @@ def run(req: RunRequest) -> dict[str, Any]:
 
 def _run(req: RunRequest, decisions: dict[int, str] | None = None) -> dict[str, Any]:
     media_plan = _plan(req.plan_id)
+    _check_plan_usable(media_plan)
     if req.plan_id not in state.approved:
         raise HTTPException(409, "план не утверждён: нажмите «Утвердить план»")
-    if not media_plan.is_feasible:
-        raise HTTPException(409, "план недостижим: примените один из предложенных ходов и утвердите новый план")
     if req.scenario_id not in SCENARIOS:
         raise HTTPException(422, f"неизвестный сценарий «{req.scenario_id}»")
-    injected = [_shock(req.shock, media_plan)] if req.shock else []
+    injected = [_shock(s, media_plan) for s in req.shocks]
     noise_seed = req.noise_seed if req.noise_seed is not None else 10_000 + req.world_seed
     seeds = SeedBundle(catalog_seed=0, world_seed=req.world_seed, noise_seed=noise_seed)
     main = run_campaign(
@@ -369,6 +391,7 @@ def _run(req: RunRequest, decisions: dict[int, str] | None = None) -> dict[str, 
         "scenario_id": req.scenario_id,
         "scenario_title": SCENARIO_TITLES.get(req.scenario_id, req.scenario_id),
         "strategy_title": STRATEGY_TITLES.get(req.strategy, req.strategy),
+        "custom_shocks": [s.model_dump(mode="json") for s in req.shocks],
         "seeds": seeds.model_dump(mode="json"),
         "main": _run_view(main),
         "frozen": _twin_view(twin),
@@ -395,6 +418,8 @@ def decide(run_id: str, req: DecideRequest) -> dict[str, Any]:
     if req.hour not in hours_with_cards:
         raise HTTPException(422, f"в час {req.hour} карточки хода нет")
     decisions = {int(k): v for k, v in prev_view["decisions"].items()}
+    if req.decision == "decline" and req.hour in prev_req.approved_hours:
+        raise HTTPException(422, f"ход часа {req.hour} уже применён по вашему решению; отменить его можно только новым прогоном")
     decisions[req.hour] = req.decision
     if req.decision == "decline":
         prev_view["decisions"] = decisions
@@ -416,6 +441,7 @@ def decide(run_id: str, req: DecideRequest) -> dict[str, Any]:
 def degradation(req: DegradationRequest) -> dict[str, Any]:
     """Стенд честности: как растёт отклонение при усилении шока, где решение ломается."""
     media_plan = _plan(req.plan_id)
+    _check_plan_usable(media_plan)
     _check_shock_target(req.channel_id, req.start_hour, media_plan)
     seeds = SeedBundle(catalog_seed=0, world_seed=req.world_seed, noise_seed=10_000 + req.world_seed)
     rows = []
@@ -444,9 +470,10 @@ def degradation(req: DegradationRequest) -> dict[str, Any]:
 @app.post("/api/compare")
 def compare(req: CompareRequest) -> dict[str, Any]:
     media_plan = _plan(req.plan_id)
+    _check_plan_usable(media_plan)
     if req.scenario_id not in SCENARIOS:
         raise HTTPException(422, f"неизвестный сценарий «{req.scenario_id}»")
-    injected = [_shock(req.shock, media_plan)] if req.shock else []
+    injected = [_shock(s, media_plan) for s in req.shocks]
     stats = compare_strategies(media_plan, state.catalog, state.curves, scenario_id=req.scenario_id, seeds=req.seeds, injected=injected, hold_plan=req.hold_plan)
     out: dict[str, Any] = {}
     for name, st in stats.items():
@@ -469,8 +496,7 @@ def compare(req: CompareRequest) -> dict[str, Any]:
 def stress(req: StressRequest) -> dict[str, Any]:
     """Стресс-тест плана до запуска: все сценарии шоков на одном мире, наша стратегия против заморозки."""
     media_plan = _plan(req.plan_id)
-    if not media_plan.is_feasible:
-        raise HTTPException(409, "недостижимый план нельзя прогнать через шоки")
+    _check_plan_usable(media_plan)
     seeds = SeedBundle(catalog_seed=0, world_seed=req.world_seed, noise_seed=10_000 + req.world_seed)
     rows = []
     for scenario_id in SCENARIOS:
@@ -542,8 +568,15 @@ def _plan_view(media_plan: MediaPlan) -> dict[str, Any]:
     data["approved_version"] = state.approved.get(media_plan.plan_id, 0)
     if media_plan.infeasibility is not None:
         # ходы — от дешёвого к дорогому, чтобы первым читался самый выгодный
-        data["infeasibility"]["suggestions"].sort(key=lambda s: s["expected_budget_rub"])
+        suggestions = data["infeasibility"]["suggestions"]
+        suggestions.sort(key=lambda s: s["expected_budget_rub"])
+        for s in suggestions:
+            # планировщик предлагает сроки без оглядки на калибровку мира; кабинет не примет горизонт длиннее MAX_HORIZON_DAYS
+            too_long = s["changed_field"] == "horizon_days" and s["suggested_value"] is not None and s["suggested_value"] > MAX_HORIZON_DAYS
+            s["applicable"] = not too_long
+            s["why_not"] = f"дольше {MAX_HORIZON_DAYS} дней: за пределами калибровки мира" if too_long else None
         data["infeasibility"]["binding_title"] = BINDING_TITLES.get(media_plan.infeasibility.binding_constraint.value, media_plan.infeasibility.binding_constraint.value)
+    data["is_empty"] = media_plan.is_feasible and (media_plan.total_budget_rub <= 0 or media_plan.total_kpi <= 0)
     return data
 
 
