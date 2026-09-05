@@ -175,11 +175,16 @@ controller:
     value: 300
     status: calibrated
     test: "tests/test_executor.py::test_full_run_is_fast"
-  reserve_warmup_hours:
-    value: 96
+  reserve_warmup_share:
+    value: 0.19
     status: calibrated
     test: "tests/test_executor.py::test_adaptive_beats_static_without_shock"
-    note: "резерв бюджета включается после четырёх суток: раньше опережение по KPI это шум первых дней, а не свойство мира"
+    note: "резерв включается после 19 % горизонта: 96 часов на кампании кейса в 21 день (там и калибровано); раньше опережение по KPI это шум первых дней, а не свойство мира; в семидневной кампании это 32 часа"
+  card_min_interval_hours:
+    value: 24
+    status: sourced
+    source_url: "https://developers.google.com/meridian/docs/user-guide/budget-optimization-scenarios"
+    note: "информационная карточка о переносе по факту не чаще раза в сутки на канал, с накоплением суммы: доля канала меняется в суточном ритме (лимит ±30 % за сутки), человек не должен читать один и тот же перенос по частям; карточки о сломе и выше лимита полномочий выдаются сразу"
   reserve_step_share:
     value: 0.05
     status: calibrated

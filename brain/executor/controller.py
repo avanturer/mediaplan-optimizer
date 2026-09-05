@@ -25,6 +25,7 @@ import numpy as np
 
 from brain.assumptions import campaign_audience_multiplier, fatigue_delta
 from brain.config import (
+    CARD_MIN_INTERVAL_HOURS,
     DEAD_ZONE,
     ERROR_BANDS,
     LAMBDA_MAX,
@@ -41,7 +42,7 @@ from brain.config import (
     REPLAN_GRID_SIZE,
     REPLAN_STEPS,
     RESERVE_STEP_SHARE,
-    RESERVE_WARMUP_HOURS,
+    RESERVE_WARMUP_SHARE,
     SHARE_RATE_LIMIT,
 )
 from brain.curves import CurvePoint, ResponseCurve
@@ -325,6 +326,9 @@ class AdaptiveExecutor(BaseExecutor):
     frozen_donors: set[str] = field(default_factory=set)  # каналы, из которых нельзя забирать, пока их карточка ждёт или отклонена
     share_anchor: dict[str, float] = field(default_factory=dict)  # доли каналов на начало текущих суток
     hold_cards: set[str] = field(default_factory=set)  # каналы, по которым карточка «держим» уже выдана в этом сломе
+    uncarded_rub: dict[str, float] = field(default_factory=dict)  # переносы по факту, ещё не показанные карточкой, по донорам
+    last_taker_hour: dict[str, int] = field(default_factory=dict)  # когда канал последний раз получал деньги: гистерезис против пинг-понга
+    last_card_hour: dict[str, int] = field(default_factory=dict)
     anchor_hour: int = -HOURS_IN_WEEK
     hold_plan: bool = True  # False = выжимать максимум KPI, резерв не используется
     lam: float = 1.0  # множитель темпа по расходу
@@ -437,14 +441,20 @@ class AdaptiveExecutor(BaseExecutor):
             pools[cid] = max(total_pool - self.estimates[cid].cum_reach, total_pool * 0.1)
         models = build_models(curves, days_left, pools, fatigue_delta(), grid_size=REPLAN_GRID_SIZE)
         old_left = {cid: max(self.target_budget[cid] - self.fact_cum_by_channel[cid], 0.0) for cid in self.channel_ids}
-        if self.hold_plan and h >= RESERVE_WARMUP_HOURS:
+        if self.hold_plan and h >= RESERVE_WARMUP_SHARE * self.horizon:
             wanted_reserve = remaining_budget - self._budget_to_use(models, remaining_budget)
             step = RESERVE_STEP_SHARE * remaining_budget
             self.reserve_rub = min(max(wanted_reserve, self.reserve_rub - step), self.reserve_rub + step, remaining_budget)
         else:
             self.reserve_rub = 0.0
         budget_to_use = remaining_budget - self.reserve_rub
-        locked = {cid: min(old_left[cid], budget_to_use) for cid in self.frozen_donors if cid in old_left}
+        # гистерезис: канал, получивший деньги в последние сутки, не отдаёт их обратно по шуму
+        # оценок; только слом (детектор, пауза) снимает защиту
+        recent_takers = {
+            cid for cid, t in self.last_taker_hour.items()
+            if h - t < CARD_MIN_INTERVAL_HOURS and not self.estimates[cid].shock_active and cid not in self.unavailable
+        }
+        locked = {cid: min(old_left[cid], budget_to_use) for cid in self.frozen_donors | recent_takers if cid in old_left}
         if sum(locked.values()) > budget_to_use:
             scale = budget_to_use / sum(locked.values())
             locked = {cid: v * scale for cid, v in locked.items()}
@@ -484,6 +494,8 @@ class AdaptiveExecutor(BaseExecutor):
 
         self._emit_proposals(h, old_left, new_left, models, remaining_budget)
         for cid in self.channel_ids:
+            if new_left[cid] - old_left[cid] > PROPOSAL_MIN_SHARE * remaining_budget:
+                self.last_taker_hour[cid] = h
             self.target_budget[cid] = self.fact_cum_by_channel[cid] + new_left[cid]
 
     def _budget_to_use(self, models, remaining_budget: float) -> float:
@@ -595,6 +607,15 @@ class AdaptiveExecutor(BaseExecutor):
                     applied_by = "human"
                 else:
                     applied_by = "pending"
+            if applied_by == "system" and not forced:
+                # перенос по факту применяется сразу, а карточка о нём копится: не чаще раза в
+                # сутки на канал и не мельче порога, иначе человек читает один перенос по частям
+                self.uncarded_rub[donor] = self.uncarded_rub.get(donor, 0.0) + amount
+                if h - self.last_card_hour.get(donor, -CARD_MIN_INTERVAL_HOURS) < CARD_MIN_INTERVAL_HOURS or self.uncarded_rub[donor] < PROPOSAL_MIN_SHARE * remaining_budget:
+                    continue
+                amount = self.uncarded_rub[donor]
+            self.uncarded_rub[donor] = 0.0
+            self.last_card_hour[donor] = h
             self.proposals.append(
                 Proposal(
                     hour=h,

@@ -68,7 +68,8 @@ PROPOSAL_MIN_SHARE: float = float(const("controller", "proposal_min_share"))
 REPLAN_GRID_SIZE: int = int(const("controller", "replan_grid_size"))
 REPLAN_STEPS: int = int(const("controller", "replan_steps"))
 PID_KP, PID_KI, PID_KD = (float(x) for x in const("controller", "pid_gains"))
-RESERVE_WARMUP_HOURS: int = int(const("controller", "reserve_warmup_hours"))
+RESERVE_WARMUP_SHARE: float = float(const("controller", "reserve_warmup_share"))
+CARD_MIN_INTERVAL_HOURS: int = int(const("controller", "card_min_interval_hours"))
 RESERVE_STEP_SHARE: float = float(const("controller", "reserve_step_share"))
 
 # метрики
