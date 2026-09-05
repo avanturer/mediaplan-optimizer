@@ -44,7 +44,7 @@
      Слот есть всегда, поэтому инпуты стоят на одной линии, есть подсказка или нет. */
   .row{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:start}
   .row > button{margin-top:22px}
-  .row > .muted{margin-top:29px}
+  .row > .muted,.row > .err{margin-top:29px}
   label{display:grid;grid-template-rows:18px auto minmax(14px,auto);gap:4px;font-size:12px;color:var(--ink3);align-content:start}
   label > span:first-child{line-height:18px;white-space:nowrap}
   /* width:0 + min-width:100% — подсказка не раздувает поле, а занимает ширину контрола */
@@ -191,7 +191,7 @@
         <label>Что ломается<select id="shock_param"></select></label>
         <label>Сила, ×<input id="shock_mult" type="number" value="0.6" step="0.1" style="min-width:110px"><span class="hint">0,6 = −40&nbsp;%, 2 = ×2</span></label>
         <label>С дня<input id="shock_day" type="number" value="11" min="1" class="short"></label>
-        <button class="small" id="btn-shock-add">Добавить</button><button class="small ghost" id="btn-shock-cancel">Отмена</button>
+        <button id="btn-shock-add">Добавить</button><button class="ghost" id="btn-shock-cancel">Отмена</button>
         <span class="err" id="shock-err"></span>
       </div>
     </div>
@@ -253,6 +253,7 @@ const ru = (s) => String(s ?? '')
   .replace(/(\d[\d ]*)\s(clicks|conversions|reach)\b/g, (_, n, k) => n + ' ' + plural(+n.replace(/\s/g, ''), k))
   .replace(/\b(clicks|conversions|reach)\b/g, m => KPI[m].many);
 // начало события (шок с часа h): день 11, 00:00; для накопительной записи H — конец часа, см. hourLabel
+const ruTitle = (s) => String(s ?? '').replace(/×(\d+)\.(\d+)/g, '×$1,$2');
 const hourStartLabel = (h) => `день ${Math.floor(h/24) + 1}, ${String(h % 24).padStart(2,'0')}:00`;
 const hourLabel = (H) => { H = Math.max(1, H|0); const day = Math.floor((H-1)/24) + 1, hod = ((H-1) % 24) + 1; return `день ${day}, ${String(hod).padStart(2,'0')}:00`; };
 
@@ -459,7 +460,7 @@ function renderScenarioOpts() {
   $('#scenario-opts').innerHTML = Object.entries(META.scenarios).map(([k, v]) => {
     const na = nDays && v.events.length && v.events.every(e => e.start_hour >= nDays * 24);
     const line = v.events.length ? v.events.map(e => eventLine(e, nDays)).join('; ') : 'без событий — базовый мир для сравнения';
-    return `<button type="button" class="opt ${k === FORM.scenario ? 'on' : ''} ${na ? 'na' : ''}" data-k="${k}"><b>${esc(ru(v.title || k))}</b><span>${esc(line)}</span></button>`;
+    return `<button type="button" class="opt ${k === FORM.scenario ? 'on' : ''} ${na ? 'na' : ''}" data-k="${k}"><b>${esc(ruTitle(v.title || k))}</b><span>${esc(line)}</span></button>`;
   }).join('');
   $('#scenario-opts').querySelectorAll('button').forEach(bt => bt.onclick = () => { FORM.scenario = bt.dataset.k; renderScenarioOpts(); updateRunCaption(); });
 }
@@ -482,7 +483,7 @@ function addShock() {
 function shockFromForm() { return SHOCKS.map(s => ({channel_id: s.channel_id, parameter: s.parameter, multiplier: s.multiplier, start_hour: (s.day - 1) * 24})); }
 function updateRunCaption() {
   const sc = META.scenarios[FORM.scenario], n = SHOCKS.length;
-  $('#run-caption').innerHTML = `на рынке: ${esc(ru(sc ? sc.title : FORM.scenario))}${n ? ` + ${n} ${pw(n, ['свой шок','своих шока','своих шоков'])}` : ''}<span class="tech"> · ${esc(STRATEGY_RU[$('#strategy').value] || $('#strategy').value)} · мир ${esc($('#world_seed').value)}</span>`;
+  $('#run-caption').innerHTML = `на рынке: ${esc(ruTitle(sc ? sc.title : FORM.scenario))}${n ? ` + ${n} ${pw(n, ['свой шок','своих шока','своих шоков'])}` : ''}<span class="tech"> · ${esc(STRATEGY_RU[$('#strategy').value] || $('#strategy').value)} · мир ${esc($('#world_seed').value)}</span>`;
 }
 
 function applySuggestion(s) {
@@ -658,7 +659,7 @@ function showHour(H) {
 
 function feedLines(r, H) {
   const m = r.main, lines = [];
-  for (const sh of r.scenarioHours) if (sh <= H) lines.push({h: sh, t: hourStartLabel(sh - 1), text: 'шок рынка: ' + esc(ru(META.scenarios[m.scenario_id]?.title || ''))});
+  for (const sh of r.scenarioHours) if (sh <= H) lines.push({h: sh, t: hourStartLabel(sh - 1), text: 'шок рынка: ' + esc(ruTitle(META.scenarios[m.scenario_id]?.title || ''))});
   for (const sk of (r.custom_shocks||[])) { const sh = sk.start_hour + 1; if (sh <= H && sh <= m.hours.length) lines.push({h: sh, t: hourStartLabel(sk.start_hour), text: `свой шок: ${esc(SHOCK_PARAM_RU[sk.parameter] || sk.parameter)} ×${String(sk.multiplier).replace('.', ',')} в «${esc(nm(sk.channel_id))}»`}); }
   for (const h of m.hours.slice(0, H)) for (const e of h.events) lines.push({h: h.hour, t: hourLabel(h.hour), text: esc(ru(e.replace(/^час \d+:\s*/, '')))});
   for (const p of m.proposals) if (p.hour <= H) { const d = (r.decisions||{})[p.hour]; const verb = p.applied_by === 'system' ? 'автоматика перенесла' : p.applied_by === 'human' ? 'вы перенесли' : d === 'decline' ? 'вы оставили как есть, предлагалось перенести' : 'ждёт решения: перенести'; lines.push({h: p.hour, t: hourLabel(p.hour), text: `${verb} ${rub(p.amount_rub)} из «${esc(nm(p.from_channel))}» в «${esc(nm(p.to_channel))}»`}); }
