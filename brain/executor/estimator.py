@@ -9,7 +9,9 @@
 - смена режима ловится сравнением отдачи на рубль за последние сутки с
   отдачей за предыдущие трое суток. Порог падения взят из практики
   мониторинга кампаний: падение CTR на 30–40 % считается аномалией
-  (Improvado, Campaign Monitoring & Anomaly Detection Guide). Сравнение
+  (Improvado, Campaign Monitoring & Anomaly Detection Guide); к порогу
+  величины добавлен тест значимости на 3σ (условный биномиальный тест двух
+  пуассоновских счётчиков), поэтому детектор сам подстраивается под шум мира. Сравнение
   суток с сутками нечувствительно к медленному дрейфу усталости и к
   суточному профилю, а требование минимального числа кликов защищает от
   пуассоновского шума маленьких каналов. Классический CUSUM (Page, 1954)
@@ -38,11 +40,11 @@ from brain.config import (
     DETECTOR_KPI_BASELINE_HOURS,
     DETECTOR_KPI_CONFIRM_HOURS,
     DETECTOR_KPI_WINDOW_HOURS,
-    DETECTOR_KPI_Z_THRESHOLD,
     DETECTOR_MIN_CLICKS,
     DETECTOR_MIN_EXPECTED_EVENTS,
     DETECTOR_RISE_THRESHOLD,
     DETECTOR_WINDOW_HOURS,
+    DETECTOR_Z_THRESHOLD,
     SHOCK_STATUS_HOURS,
 )
 
@@ -80,7 +82,7 @@ class DropDetector:
     rise_threshold: float | None = DETECTOR_RISE_THRESHOLD  # None = рост не считается аномалией
     min_events: float = DETECTOR_MIN_CLICKS
     confirm_hours: int = DETECTOR_CONFIRM_HOURS
-    z_threshold: float | None = None  # если задан: падение должно быть ещё и значимым на этом уровне σ
+    z_threshold: float | None = DETECTOR_Z_THRESHOLD  # падение должно быть ещё и значимым на этом уровне σ
     history: deque = field(default_factory=deque)  # (события, расход, ожидаемая отдача, показы) по часам
     triggered_at: int | None = None
     last_ratio: float | None = None
@@ -171,7 +173,7 @@ class DropDetector:
         if total * p0 < DETECTOR_MIN_EXPECTED_EVENTS or total * (1 - p0) < DETECTOR_MIN_EXPECTED_EVENTS:
             return False
         sd = (total * p0 * (1 - p0)) ** 0.5
-        return sd > 0 and (recent_clicks - total * p0) / sd >= DETECTOR_KPI_Z_THRESHOLD
+        return sd > 0 and (recent_clicks - total * p0) / sd >= DETECTOR_Z_THRESHOLD
 
     def _fire(self, hour: int) -> None:
         self.triggered_at = hour
@@ -191,7 +193,6 @@ def kpi_detector() -> DropDetector:
         rise_threshold=None,
         min_events=1.0,
         confirm_hours=DETECTOR_KPI_CONFIRM_HOURS,
-        z_threshold=DETECTOR_KPI_Z_THRESHOLD,
     )
 
 

@@ -50,7 +50,7 @@ SHOCK_STATUS_HOURS: int = int(const("detector", "shock_status_hours"))
 DETECTOR_RISE_THRESHOLD: float = float(const("detector", "rise_threshold"))
 DETECTOR_KPI_WINDOW_HOURS: int = int(const("detector", "kpi_window_hours"))
 DETECTOR_KPI_BASELINE_HOURS: int = int(const("detector", "kpi_baseline_hours"))
-DETECTOR_KPI_Z_THRESHOLD: float = float(const("detector", "kpi_z_threshold"))
+DETECTOR_Z_THRESHOLD: float = float(const("detector", "z_threshold"))
 DETECTOR_MIN_EXPECTED_EVENTS: float = float(const("detector", "min_expected_events"))
 DETECTOR_KPI_CONFIRM_HOURS: int = int(const("detector", "kpi_confirm_hours"))
 
