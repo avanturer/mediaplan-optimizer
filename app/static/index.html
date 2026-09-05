@@ -156,6 +156,7 @@ const KPI = {
 const plural = (n, k) => { const w = KPI[k]; const a = Math.abs(Math.round(n)) % 100, b = a % 10; return a > 10 && a < 20 ? w.many : b === 1 ? w.one : b >= 2 && b <= 4 ? w.few : w.many; };
 // acc=true — винительный падеж после «обещали / получили / ожидаем»: одна конверсия → «конверсию»
 const kpiN = (n, k, acc=false) => { const w = KPI[k], p = plural(n, k); return fmt(n) + ' ' + (acc && p === w.one ? w.acc : p); };
+const cap = (s) => s ? s[0].toUpperCase() + s.slice(1) : s;
 let META = null, PLAN = null, RUN = null, CHARTS = {}, PLAYER = {h:0, timer:null, speed:6}, FORM = {channel_ids: null};
 let NAME = {}, STRATEGY_RU = {}, BINDING_RU = {};
 const nm = (id) => NAME[id] || id;
@@ -443,7 +444,7 @@ function showHour(H) {
   const errS = rec.err_spend, errK = rec.err_kpi, zk = z.hours[H-1].fact_cum_kpi, dz = rec.fact_cum_kpi - zk;
   const tiles = [
     ['Расход накопительно', fmt(rec.fact_cum_spend) + '\u00a0₽', 'план к этому часу ' + fmt(rec.plan_cum_spend) + ' ₽ (' + (errS>0?'−':'+') + pct(Math.abs(errS)) + ')', 'fact'],
-    [K.many + ' накопительно', fmt(rec.fact_cum_kpi), 'план к этому часу ' + fmt(rec.plan_cum_kpi) + ' (' + (errK>0?'−':'+') + pct(Math.abs(errK)) + ')', 'fact'],
+    [cap(K.many) + ' накопительно', fmt(rec.fact_cum_kpi), 'план к этому часу ' + fmt(rec.plan_cum_kpi) + ' (' + (errK>0?'−':'+') + pct(Math.abs(errK)) + ')', 'fact'],
     ['Без перераспределения было бы', fmt(zk), `тот же мир, план буквально (${dz >= 0 ? '+' : ''}${fmt(dz)})`, ''],
     rec.reserve > 0 ? ['Резерв бюджета', fmt(rec.reserve) + '\u00a0₽', 'план выполняется, лишнее не тратим', 'ok'] : ['Допуск коридора', '±' + pct(PLAN.corridor_rel, 0), 'за коридором — «наблюдаем», после детектора — «пожар»', ''],
   ];
@@ -452,7 +453,7 @@ function showHour(H) {
     const ch = CHARTS[id]; if (!ch) continue; ch.data.datasets[1].data = m.hours.map((h,i) => i < H ? h[key] : null); ch.data.datasets[2].data = z.hours.map((h,i) => i < H ? h[key] : null); ch.update('none');
   }
   const channels = Object.keys(rec.by_channel), hod = ((H-1) % 24) + 1;
-  $('#hour-table').innerHTML = `<thead><tr><th>Канал</th><th>Лимит на час, ₽</th><th>Запросы</th><th>Показы</th><th>Охват</th><th>Клики</th><th>Конверсии</th><th>Расход, ₽</th><th>eCPM</th><th>Расход накопит.</th><th>${K.many} накопит.</th></tr></thead><tbody>` +
+  $('#hour-table').innerHTML = `<thead><tr><th>Канал</th><th>Лимит на час, ₽</th><th>Запросы</th><th>Показы</th><th>Охват</th><th>Клики</th><th>Конверсии</th><th>Расход, ₽</th><th>eCPM</th><th>Расход накопит.</th><th>${cap(K.many)} накопит.</th></tr></thead><tbody>` +
     channels.map(c => { const s = rec.by_channel[c]; const meta = META.catalog.channels.find(x => x.channel_id === c); const win = meta && meta.sms ? meta.sms.send_hours : null; const outside = win && (hod <= win[0] || hod > win[1]); const dim = outside || (s.impressions === 0 && rec.caps[c] > 0); const note = outside ? ` · вне окна ${win[0]}–${win[1]}` : (dim ? ' · нет показов' : ''); return `<tr class="${dim?'dim':''}"><td>${esc(nm(c))}${note}</td><td>${fmt(rec.caps[c])}</td><td>${fmt(s.requests)}</td><td>${fmt(s.impressions)}</td><td>${fmt(s.unique_reach)}</td><td>${fmt(s.clicks)}</td><td>${fmt(s.conversions)}</td><td>${fmt(s.spend)}</td><td>${fmt(s.ecpm)}</td><td>${fmt(r.cum[c].spend[H-1])}</td><td>${fmt(r.cum[c].kpi[H-1])}</td></tr>`; }).join('') + '</tbody>';
   $('#feed').innerHTML = feedLines(r, H).slice(0, 14).map(l => `<div><span class="t">${l.t}</span>${l.text}</div>`).join('') || '<div class="muted">пока тихо: ни шоков, ни ходов, детектор молчит</div>';
   const cards = m.proposals.filter(p => p.hour < H);
@@ -567,7 +568,7 @@ function renderSummary(r) {
       <div class="tile"><span>Ходов автоматики</span><b>${m.proposals.length}</b><span>обращений к человеку: ${v.human_requests}</span></div>
     </div>
     <h3>По каналам: обещали и получили</h3>
-    <div class="scroll"><table><thead><tr><th>Канал</th><th>Бюджет по плану</th><th>Потрачено</th><th>Δ</th><th>${K.many} по плану</th><th>${K.many} получено</th><th>Δ</th></tr></thead><tbody>${perChannel}</tbody></table></div>
+    <div class="scroll"><table><thead><tr><th>Канал</th><th>Бюджет по плану</th><th>Потрачено</th><th>Δ</th><th>${cap(K.many)} по плану</th><th>${cap(K.many)} получено</th><th>Δ</th></tr></thead><tbody>${perChannel}</tbody></table></div>
     <h3>Хронология: шоки, детектор, ходы</h3>
     <div class="feed">${chrono.map(l=>`<div><span class="t">${l.t}</span>${l.text}</div>`).join('') || '<div class="muted">шоков и ходов не было</div>'}</div>`;
 }
@@ -579,7 +580,7 @@ async function compareStrategies() {
     const cmp = await api('/api/compare', {body: {plan_id: PLAN.plan_id, scenario_id: $('#scenario').value, seeds: 20, shock: shockFromForm(), hold_plan: $('#hold_plan').value === 'true'}});
     const st = cmp.strategies, K = KPI[PLAN.kpi_name];
     const rows = Object.values(st).map(s => `<tr><td>${esc(s.title || s.strategy)}</td><td>${pct(s.mean.final_deviation_spend)} ± ${pct(s.ci95.final_deviation_spend)}</td><td>${pct(s.mean.final_deviation_kpi)} ± ${pct(s.ci95.final_deviation_kpi)}</td><td>${s.within_threshold_count} из ${cmp.seeds}</td><td>${pct(s.mean.mape_spend)}</td><td>${pct(s.mean.mape_kpi)}</td><td>${fmt(s.mean_actual_kpi)}</td><td>${fmt(s.mean_actual_spend)}</td><td>${s.win_rate_vs_static.final_deviation_kpi!=null?pct(s.win_rate_vs_static.final_deviation_kpi,0):'—'}</td><td>${s.win_rate_vs_static.final_deviation_spend!=null?pct(s.win_rate_vs_static.final_deviation_spend,0):'—'}</td></tr>`).join('');
-    box.innerHTML = `<h3>Надёжность результата: ${cmp.seeds} парных миров, одна лента случайности для всех стратегий</h3><div class="scroll"><table><thead><tr><th>Стратегия</th><th>Откл. расхода в конце</th><th>Откл. ${K.many} в конце</th><th>Миров в пороге ${pct(cmp.threshold,0)}</th><th>MAPE расхода по часам</th><th>MAPE ${K.many} по часам</th><th>${K.many}, среднее</th><th>Расход, среднее</th><th>Побед над планом без изменений по ${K.dat}</th><th>по расходу</th></tr></thead><tbody>${rows}</tbody></table></div>
+    box.innerHTML = `<h3>Надёжность результата: ${cmp.seeds} парных миров, одна лента случайности для всех стратегий</h3><div class="scroll"><table><thead><tr><th>Стратегия</th><th>Откл. расхода в конце</th><th>Откл. ${K.many} в конце</th><th>Миров в пороге ${pct(cmp.threshold,0)}</th><th>MAPE расхода по часам</th><th>MAPE ${K.many} по часам</th><th>${cap(K.many)}, среднее</th><th>Расход, среднее</th><th>Побед над планом без изменений по ${K.dat}</th><th>по расходу</th></tr></thead><tbody>${rows}</tbody></table></div>
       <p class="muted">Один красивый мир не доказательство: здесь средние с 95 % доверительным интервалом; план ${kpiN(PLAN.total_kpi, PLAN.kpi_name)}. Кейс называет метрикой MAPE накопительных рядов; мы читаем её как отклонение в конце кампании (порог 20 %) и показываем рядом MAPE по часам. По часам план без изменений часто ближе, потому что тратит ровно по плану; наше ведение сдвигает расход ради ${K.many} — это цена удержания результата, и она видна в столбце «по расходу».</p>`;
   } catch (e) { box.innerHTML = `<p class="err">Сравнение не прошло: ${esc(e.message)}</p>`; }
   $('#btn-compare').disabled = false;
