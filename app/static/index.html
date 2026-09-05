@@ -28,7 +28,9 @@
   .row > button{margin-top:22px}
   label{display:grid;grid-template-rows:18px auto minmax(14px,auto);gap:4px;font-size:12px;color:var(--ink3);align-content:start}
   label > span:first-child{line-height:18px;white-space:nowrap}
-  label .hint{font-size:11px;line-height:1.3;color:var(--ink3);max-width:220px}
+  /* width:0 + min-width:100% — подсказка не раздувает поле, а занимает ширину контрола */
+  label .hint{font-size:11px;line-height:1.3;color:var(--ink3);width:0;min-width:100%}
+  #max_cpa,#auto_limit,#world_seed{min-width:170px}
   label.inline{grid-template-rows:auto;grid-auto-flow:column;align-items:center;gap:6px}
   input,select{padding:6px 8px;border:1px solid var(--rule);border-radius:4px;font:inherit;min-width:120px;background:#fff;color:var(--ink)}
   input.short{min-width:80px}
@@ -43,7 +45,8 @@
   th,td{padding:6px 8px;border-bottom:1px solid var(--rule);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
   th:first-child,td:first-child{text-align:left}
   th{color:var(--ink2);font-weight:600;background:#F7F9FB;vertical-align:bottom;line-height:1.2}
-  th span.w{display:inline-block;max-width:10em;white-space:normal}
+  th span.w{display:inline-block;max-width:12em;white-space:normal}
+  th span.w2{display:inline-block;white-space:nowrap;text-align:inherit}
   td.key,th.key{background:var(--key);font-weight:600}
   tr.dim td{color:var(--ink3)}
   .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:10px 0;min-width:0}
@@ -102,7 +105,7 @@
     <label id="f-objective">Что максимизируем<select id="objective"><option value="max_conversions">конверсии</option><option value="max_clicks">клики</option><option value="max_reach">охват</option></select></label>
     <label id="f-tkpi" hidden>Цель в чём<select id="target_kpi"><option value="clicks">клики</option><option value="conversions">конверсии</option><option value="reach">охват</option></select></label>
     <label id="f-tval" hidden>Целевой объём<input id="target_value" type="number" value="50000" step="1000"></label>
-    <label>Срок, дней<input id="horizon" type="number" value="21" min="1" max="30" class="short"><span class="hint">кейс: 14–21 день, мир откалиброван до 30</span></label>
+    <label>Срок, дней<input id="horizon" type="number" value="21" min="1" max="30" style="min-width:100px"><span class="hint">в кейсе 14–21</span></label>
     <button id="btn-plan">Рассчитать план</button>
   </div>
   <details class="more"><summary>Дополнительно: потолок CPA и лимит автоматики</summary>
@@ -125,7 +128,7 @@
     <label>Что случится на рынке<select id="scenario"></select></label>
     <label>Свой шок: канал<select id="shock_channel"><option value="">нет</option></select></label>
     <label>Что ломается<select id="shock_param"></select></label>
-    <label>Сила, ×<input id="shock_mult" type="number" value="0.6" step="0.1" class="short"><span class="hint">0,6 — падение на 40 %; 2 — рост вдвое</span></label>
+    <label>Сила, ×<input id="shock_mult" type="number" value="0.6" step="0.1" style="min-width:110px"><span class="hint">0,6 = −40 %, 2 = ×2</span></label>
     <label>С дня<input id="shock_day" type="number" value="11" min="1" class="short"></label>
     <button id="btn-run">Запустить</button>
   </div>
@@ -164,6 +167,8 @@ const plural = (n, k) => { const w = KPI[k]; const a = Math.abs(Math.round(n)) 
 // acc=true — винительный падеж после «обещали / получили / ожидаем»: одна конверсия → «конверсию»
 const kpiN = (n, k, acc=false) => { const w = KPI[k], p = plural(n, k); return fmt(n) + ' ' + (acc && p === w.one ? w.acc : p); };
 const cap = (s) => s ? s[0].toUpperCase() + s.slice(1) : s;
+// Двухстрочный заголовок столбца: перенос ровно там, где задан, строки не рвутся
+const h2 = (a, b) => `<span class="w2">${a}<br>${b}</span>`;
 let META = null, PLAN = null, RUN = null, CHARTS = {}, PLAYER = {h:0, timer:null, speed:6}, FORM = {channel_ids: null};
 let NAME = {}, STRATEGY_RU = {}, BINDING_RU = {};
 const nm = (id) => NAME[id] || id;
@@ -238,7 +243,7 @@ async function makePlan(overrides={}) {
 
 function kpiOf(t, kpi) { return kpi === 'clicks' ? t.cum_clicks : kpi === 'reach' ? t.cum_reach : t.cum_conversions; }
 function allocKpi(a, kpi) { return kpi === 'clicks' ? a.clicks : kpi === 'reach' ? a.unique_reach : a.conversions; }
-function marginalLabel(kpi) { return kpi === 'conversions' ? 'Цена след. конверсии, ₽' : 'Цена след. 1000 ' + KPI[kpi].many + ', ₽'; }
+function marginalLabel(kpi) { return kpi === 'conversions' ? h2('Цена след.', 'конверсии, ₽') : h2('Цена след. 1000', KPI[kpi].many + ', ₽'); }
 function marginalValue(a, kpi) { return a.marginal_cost_per_1000_kpi_rub == null ? null : (kpi === 'conversions' ? a.marginal_cost_per_1000_kpi_rub / 1000 : a.marginal_cost_per_1000_kpi_rub); }
 
 function resetRun() {
@@ -280,7 +285,7 @@ function renderPlan(p) {
     <div class="row"><button id="btn-approve">Утвердить план</button>${p.brief.budget_rub ? '<button class="secondary" id="btn-whatif">Что если бюджет −10 % / +10 %</button>' : ''}<button class="secondary" id="btn-stress">Стресс-тест: прогнать план через шоки</button><span class="muted">до запуска: план проходит семь шоков рынка на одном мире, видно, какие выдерживает</span></div>
     <div id="whatif"></div>
     <div id="stress"></div>
-    <div class="scroll"><table><thead><tr><th>Канал</th><th>Бюджет, ₽</th><th>Доля</th><th class="key">${marginalLabel(p.kpi_name)}</th><th>Показы</th><th>Охват</th><th>Клики</th><th>Конверсии</th><th>CTR</th><th>VTR*</th><th>CR</th><th>CPM</th><th>CPC</th><th>CPA</th><th>Частота</th><th>Выкуп аудитории</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="scroll"><table><thead><tr><th>Канал</th><th>Бюджет, ₽</th><th>Доля</th><th class="key">${marginalLabel(p.kpi_name)}</th><th>Показы</th><th>Охват</th><th>Клики</th><th>Конверсии</th><th>CTR</th><th>VTR*</th><th>CR</th><th>CPM</th><th>CPC</th><th>CPA</th><th>Частота</th><th>${h2('Выкуп', 'аудитории')}</th></tr></thead><tbody>${rows}</tbody></table></div>
     <p class="muted">Выделенный столбец сравнивает каналы между собой: канал получает деньги, пока следующая ${K.one} в нём не дороже, чем в остальных. Где цена выше общей — канал остановлен перед изломом кривой из ретро-истории: следующий рубль там дал бы меньше. * VTR — допущение 35 % без публичного источника (config/assumptions.yaml); досмотры симулятор не моделирует.</p>
     <details class="more"><summary>Календарь расходов по дням, тыс. ₽</summary>
       <div class="scroll"><table><thead><tr><th>Канал</th>${Array.from({length: days}, (_, i) => `<th>${i+1}</th>`).join('')}</tr></thead><tbody>${calRows}</tbody></table></div>
@@ -332,7 +337,7 @@ async function whatIf() {
     const base = PLAN._req, b0 = PLAN.total_budget_rub, k0 = PLAN.total_kpi, K = KPI[PLAN.kpi_name];
     const [lo, hi] = await Promise.all([0.9, 1.1].map(f => api('/api/plan', {body: {...base, budget_rub: Math.round(b0 * f)}})));
     const line = (p, f) => { const dk = p.total_kpi - k0; return `<tr><td>бюджет ${f > 1 ? '+' : '−'}10 %: ${fmt(p.total_budget_rub)} ₽</td><td>${kpiN(p.total_kpi, PLAN.kpi_name)}</td><td>${dk >= 0 ? '+' : ''}${fmt(dk)}</td><td>${fmt(Math.abs(p.total_budget_rub - b0) / Math.max(Math.abs(dk), 1))} ₽</td><td>${fmt(p.total_budget_rub / p.total_kpi)} ₽</td></tr>`; };
-    box.innerHTML = `<table><thead><tr><th>Вариант</th><th>Прогноз</th><th>Δ</th><th>Цена каждой добавленной / потерянной ${K.one === 'человек охвата' ? 'единицы' : K.one.replace(/я$/, 'и').replace(/к$/, 'ка')}</th><th>Средняя цена</th></tr></thead><tbody>${line(lo, 0.9)}${line(hi, 1.1)}</tbody></table><p class="muted">Отдача вогнутая: последние 10 % бюджета приносят меньше, чем первые. Это цифра для разговора о бюджете.</p>`;
+    box.innerHTML = `<table><thead><tr><th>Вариант</th><th>Прогноз</th><th>Δ</th><th>${h2('Цена каждой добавленной', 'или потерянной единицы')}</th><th>${h2('Средняя', 'цена')}</th></tr></thead><tbody>${line(lo, 0.9)}${line(hi, 1.1)}</tbody></table><p class="muted">Отдача вогнутая: последние 10 % бюджета приносят меньше, чем первые. Это цифра для разговора о бюджете.</p>`;
     fixHeaders(box);
   } catch (e) { box.innerHTML = `<p class="err">Не посчитали: ${esc(e.message)}</p>`; }
 }
@@ -355,7 +360,7 @@ async function stressTest() {
     const shocks = r.rows.filter(x => x.is_shock), calm = r.rows.find(x => !x.is_shock);
     const ok = shocks.filter(x => x.withstands).length;
     box.innerHTML = `<div class="verdict ${ok === shocks.length ? 'ok' : 'note'}"><b>План выдерживает ${ok} из ${shocks.length} шоков</b> при пороге кейса ${pct(r.threshold,0)} на отклонение в конце${calm ? `; спокойный рынок: ${calm.withstands ? 'в пороге' : 'вне порога'}` : ''}. Один мир (зерно ${r.world_seed}), наше ведение против плана без изменений. На двадцати мирах — кнопка «Сравнить стратегии» ниже.</div>
-      <div class="scroll"><table><thead><tr><th>Что случилось</th><th>Вердикт</th><th>Наше ведение: откл. KPI / расхода</th><th>Без изменений: откл. KPI / расхода</th><th>KPI: наше / без изменений</th><th>Детектор</th><th>Ходов</th></tr></thead><tbody>
+      <div class="scroll"><table><thead><tr><th>Что случилось</th><th>Вердикт</th><th>${h2('Наше ведение:', 'откл. KPI / расхода')}</th><th>${h2('Без изменений:', 'откл. KPI / расхода')}</th><th>${h2('KPI:', 'наше / без изменений')}</th><th>Детектор</th><th>Ходов</th></tr></thead><tbody>
       ${r.rows.map(x => `<tr class="${x.is_shock ? '' : 'dim'}"><td>${esc(x.title)}</td><td><span class="badge ${x.withstands?'':'bad'}">${x.withstands?'выдерживает':'уязвим'}</span></td><td>${pct(x.adaptive_dev_kpi)} / ${pct(x.adaptive_dev_spend)}</td><td>${pct(x.frozen_dev_kpi)} / ${pct(x.frozen_dev_spend)}</td><td>${fmt(x.adaptive_kpi)} / ${fmt(x.frozen_kpi)}</td><td>${Object.entries(x.detection_hours).map(([c,h])=>esc(nm(c))+' · '+hourLabel(h)).join(', ')||'—'}</td><td>${x.moves}</td></tr>`).join('')}</tbody></table></div>`;
     fixHeaders(box);
   } catch (e) { box.innerHTML = `<p class="err">Стресс-тест не прошёл: ${esc(e.message)}</p>`; }
@@ -469,7 +474,7 @@ function showHour(H) {
     const ch = CHARTS[id]; if (!ch) continue; ch.data.datasets[1].data = m.hours.map((h,i) => i < H ? h[key] : null); ch.data.datasets[2].data = z.hours.map((h,i) => i < H ? h[key] : null); ch.update('none');
   }
   const channels = Object.keys(rec.by_channel), hod = ((H-1) % 24) + 1;
-  $('#hour-table').innerHTML = `<thead><tr><th>Канал</th><th>Лимит на час, ₽</th><th>Запросы</th><th>Показы</th><th>Охват</th><th>Клики</th><th>Конверсии</th><th>Расход, ₽</th><th>eCPM</th><th>Расход накопит.</th><th>${cap(K.many)} накопит.</th></tr></thead><tbody>` +
+  $('#hour-table').innerHTML = `<thead><tr><th>Канал</th><th>${h2('Лимит', 'на час, ₽')}</th><th>Запросы</th><th>Показы</th><th>Охват</th><th>Клики</th><th>Конверсии</th><th>Расход, ₽</th><th>eCPM</th><th>${h2('Расход', 'накопит.')}</th><th>${h2(cap(K.many), 'накопит.')}</th></tr></thead><tbody>` +
     channels.map(c => { const s = rec.by_channel[c]; const meta = META.catalog.channels.find(x => x.channel_id === c); const win = meta && meta.sms ? meta.sms.send_hours : null; const outside = win && (hod <= win[0] || hod > win[1]); const dim = outside || (s.impressions === 0 && rec.caps[c] > 0); const note = outside ? ` · вне окна ${win[0]}–${win[1]}` : (dim ? ' · нет показов' : ''); return `<tr class="${dim?'dim':''}"><td>${esc(nm(c))}${note}</td><td>${fmt(rec.caps[c])}</td><td>${fmt(s.requests)}</td><td>${fmt(s.impressions)}</td><td>${fmt(s.unique_reach)}</td><td>${fmt(s.clicks)}</td><td>${fmt(s.conversions)}</td><td>${fmt(s.spend)}</td><td>${fmt(s.ecpm)}</td><td>${fmt(r.cum[c].spend[H-1])}</td><td>${fmt(r.cum[c].kpi[H-1])}</td></tr>`; }).join('') + '</tbody>';
   $('#feed').innerHTML = feedLines(r, H).slice(0, 14).map(l => `<div><span class="t">${l.t}</span>${l.text}</div>`).join('') || '<div class="muted">пока тихо: ни шоков, ни ходов, детектор молчит</div>';
   const cards = m.proposals.filter(p => p.hour < H);
@@ -550,7 +555,7 @@ async function degradationTest() {
     const breakAt = d.rows.find(x => !x.withstands);
     box.innerHTML = `<h3>Где ломается решение: ${esc(SHOCK_PARAM_RU[param] || param)} в «${esc(nm(channel))}» с ${hourStartLabel(startHour)}, мир ${$('#world_seed').value}</h3>
       <div class="two"><div class="chart"><canvas id="c-degrade"></canvas></div>
-      <div><table><thead><tr><th>Сила</th><th>Наше ведение: откл. KPI / расхода</th><th>Без изменений: откл. KPI / расхода</th><th>Детектор</th><th>Порог 20 %</th></tr></thead><tbody>${d.rows.map(x => `<tr><td>×${x.multiplier}</td><td>${pct(x.adaptive_dev_kpi)} / ${pct(x.adaptive_dev_spend)}</td><td>${pct(x.frozen_dev_kpi)} / ${pct(x.frozen_dev_spend)}</td><td>${x.detection_hour ? hourLabel(x.detection_hour) : '—'}</td><td>${x.withstands ? 'выдерживает' : 'не выдерживает'}</td></tr>`).join('')}</tbody></table>
+      <div><table><thead><tr><th>Сила</th><th>${h2('Наше ведение:', 'откл. KPI / расхода')}</th><th>${h2('Без изменений:', 'откл. KPI / расхода')}</th><th>Детектор</th><th>Порог 20 %</th></tr></thead><tbody>${d.rows.map(x => `<tr><td>×${x.multiplier}</td><td>${pct(x.adaptive_dev_kpi)} / ${pct(x.adaptive_dev_spend)}</td><td>${pct(x.frozen_dev_kpi)} / ${pct(x.frozen_dev_spend)}</td><td>${x.detection_hour ? hourLabel(x.detection_hour) : '—'}</td><td>${x.withstands ? 'выдерживает' : 'не выдерживает'}</td></tr>`).join('')}</tbody></table>
       <p class="muted">${breakAt ? `Решение перестаёт укладываться в порог кейса при силе ×${breakAt.multiplier}: это граница применимости, названная явно.` : 'На этом диапазоне решение укладывается в порог кейса при любой силе шока.'}</p></div></div>`;
     lineChart('c-degrade', d.rows.map(x => '×' + x.multiplier), [
       {label: 'наше ведение: отклонение KPI', data: d.rows.map(x => x.adaptive_dev_kpi * 100), borderColor: '#1F8A70', borderWidth: 2.5},
@@ -586,7 +591,7 @@ function renderSummary(r) {
       <div class="tile"><span>Ходов автоматики</span><b>${m.proposals.length}</b><span>обращений к человеку: ${v.human_requests}</span></div>
     </div>
     <h3>По каналам: обещали и получили</h3>
-    <div class="scroll"><table><thead><tr><th>Канал</th><th>Бюджет по плану</th><th>Потрачено</th><th>Δ</th><th>${cap(K.many)} по плану</th><th>${cap(K.many)} получено</th><th>Δ</th></tr></thead><tbody>${perChannel}</tbody></table></div>
+    <div class="scroll"><table><thead><tr><th>Канал</th><th>${h2('Бюджет', 'по плану')}</th><th>Потрачено</th><th>Δ</th><th>${h2(cap(K.many), 'по плану')}</th><th>${h2(cap(K.many), 'получено')}</th><th>Δ</th></tr></thead><tbody>${perChannel}</tbody></table></div>
     <h3>Хронология: шоки, детектор, ходы</h3>
     <div class="feed">${chrono.map(l=>`<div><span class="t">${l.t}</span>${l.text}</div>`).join('') || '<div class="muted">шоков и ходов не было</div>'}</div>`;
   fixHeaders($('#summary-body'));
@@ -599,7 +604,7 @@ async function compareStrategies() {
     const cmp = await api('/api/compare', {body: {plan_id: PLAN.plan_id, scenario_id: $('#scenario').value, seeds: 20, shock: shockFromForm(), hold_plan: $('#hold_plan').value === 'true'}});
     const st = cmp.strategies, K = KPI[PLAN.kpi_name];
     const rows = Object.values(st).map(s => `<tr><td>${esc(s.title || s.strategy)}</td><td>${pct(s.mean.final_deviation_spend)} ± ${pct(s.ci95.final_deviation_spend)}</td><td>${pct(s.mean.final_deviation_kpi)} ± ${pct(s.ci95.final_deviation_kpi)}</td><td>${s.within_threshold_count} из ${cmp.seeds}</td><td>${pct(s.mean.mape_spend)}</td><td>${pct(s.mean.mape_kpi)}</td><td>${fmt(s.mean_actual_kpi)}</td><td>${fmt(s.mean_actual_spend)}</td><td>${s.win_rate_vs_static.final_deviation_kpi!=null?pct(s.win_rate_vs_static.final_deviation_kpi,0):'—'}</td><td>${s.win_rate_vs_static.final_deviation_spend!=null?pct(s.win_rate_vs_static.final_deviation_spend,0):'—'}</td></tr>`).join('');
-    box.innerHTML = `<h3>Надёжность результата: ${cmp.seeds} парных миров, одна лента случайности для всех стратегий</h3><div class="scroll"><table><thead><tr><th>Стратегия</th><th>Откл. расхода в конце</th><th>Откл. ${K.many} в конце</th><th>Миров в пороге ${pct(cmp.threshold,0)}</th><th>MAPE расхода по часам</th><th>MAPE ${K.many} по часам</th><th>${cap(K.many)}, среднее</th><th>Расход, среднее</th><th>Побед над планом без изменений по ${K.dat}</th><th>по расходу</th></tr></thead><tbody>${rows}</tbody></table></div>
+    box.innerHTML = `<h3>Надёжность результата: ${cmp.seeds} парных миров, одна лента случайности для всех стратегий</h3><div class="scroll"><table><thead><tr><th>Стратегия</th><th>${h2('Откл. расхода', 'в конце')}</th><th>${h2('Откл. ' + K.many, 'в конце')}</th><th>${h2('Миров в пороге', pct(cmp.threshold,0))}</th><th>${h2('MAPE расхода', 'по часам')}</th><th>${h2('MAPE ' + K.many, 'по часам')}</th><th>${h2(cap(K.many) + ',', 'среднее')}</th><th>${h2('Расход,', 'среднее')}</th><th>${h2('Побед над заморозкой', 'по ' + K.dat)}</th><th>${h2('Побед', 'по расходу')}</th></tr></thead><tbody>${rows}</tbody></table></div>
       <p class="muted">Один красивый мир не доказательство: здесь средние с 95 % доверительным интервалом; план ${kpiN(PLAN.total_kpi, PLAN.kpi_name)}. Кейс называет метрикой MAPE накопительных рядов; мы читаем её как отклонение в конце кампании (порог 20 %) и показываем рядом MAPE по часам. По часам план без изменений часто ближе, потому что тратит ровно по плану; наше ведение сдвигает расход ради ${K.many} — это цена удержания результата, и она видна в столбце «по расходу».</p>`;
     fixHeaders(box);
   } catch (e) { box.innerHTML = `<p class="err">Сравнение не прошло: ${esc(e.message)}</p>`; }
