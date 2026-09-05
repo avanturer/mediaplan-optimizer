@@ -120,6 +120,7 @@ RU_RULES = {
     "int_type": "нужно целое число",
     "float_type": "нужно число",
     "too_short": "список пуст",
+    "too_long": "не больше {max_length}",
     "string_pattern_mismatch": "недопустимое значение",
 }
 

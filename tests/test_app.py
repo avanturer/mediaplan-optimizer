@@ -77,7 +77,7 @@ def test_infeasible_plan_cannot_be_approved_or_run(client):
     assert client.post(f"/api/plan/{plan['plan_id']}/approve").status_code == 409
     r = client.post("/api/run", json={"plan_id": plan["plan_id"]})
     assert r.status_code == 409
-    assert "утверждён" in r.json()["detail"]
+    assert "недостижим" in r.json()["detail"]  # достижимость проверяется раньше утверждения
 
 
 def test_run_requires_approval(client):
