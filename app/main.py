@@ -58,7 +58,7 @@ PRESETS: dict[str, dict[str, Any]] = {
     "all": {"title": "Все восемь каналов", "channels": ["social_1", "social_2", "social_3", "programmatic", "marketplace_1", "marketplace_2", "marketplace_3", "sms"]},
     "performance": {"title": "Перформанс: programmatic и маркетплейсы", "channels": ["programmatic", "marketplace_1", "marketplace_2", "marketplace_3"]},
     "social_sms": {"title": "Соцсети и SMS", "channels": ["social_1", "social_2", "social_3", "sms"]},
-    "narrow": {"title": "Узкий пресет: две соцсети, один маркетплейс, SMS", "channels": ["social_2", "social_3", "marketplace_1", "sms"]},
+    "narrow": {"title": "Узкий: две соцсети, маркетплейс, SMS", "channels": ["social_2", "social_3", "marketplace_1", "sms"]},
 }
 
 SCENARIO_TITLES = {
