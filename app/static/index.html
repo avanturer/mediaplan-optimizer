@@ -4,16 +4,20 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>MediaPlan Optimizer</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="/static/vendor/chart.umd.min.js"></script>
 <style>
   :root{--bg:#F2F4F7;--surface:#fff;--ink:#141A22;--ink2:#3F4A59;--ink3:#6B7688;--rule:#D2D9E2;--plan:#24486B;--fact:#1F8A70;--frozen:#A9701A;--alert:#9C3A2B;--ok:#2C6552;--warn:#B7791F}
   *{box-sizing:border-box}
+  [hidden]{display:none!important}
   body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
   header{background:var(--surface);border-bottom:1px solid var(--rule);padding:14px 28px;display:flex;align-items:baseline;gap:18px;flex-wrap:wrap}
   header h1{margin:0;font-size:18px}
   header span{color:var(--ink3);font-size:13px}
-  main{max-width:1280px;margin:0 auto;padding:20px 28px 60px;display:grid;gap:22px}
-  section{background:var(--surface);border:1px solid var(--rule);border-radius:6px;padding:18px 20px}
+  main{max-width:1280px;margin:0 auto;padding:20px 28px 60px;display:grid;grid-template-columns:minmax(0,1fr);gap:22px}
+  section{background:var(--surface);border:1px solid var(--rule);border-radius:6px;padding:18px 20px;min-width:0}
+  .scroll{overflow:auto;max-width:100%}
+  .scroll th:first-child,.scroll td:first-child{position:sticky;left:0;background:var(--surface);z-index:1}
+  .scroll th:first-child{background:#F7F9FB}
   h2{margin:0 0 12px;font-size:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
   h2 small{color:var(--ink3);font-weight:400}
   h3{margin:16px 0 8px;font-size:14px;color:var(--ink2)}
@@ -29,7 +33,7 @@
   th:first-child,td:first-child{text-align:left}
   th{color:var(--ink2);font-weight:600;background:#F7F9FB}
   tr.dim td{color:var(--ink3)}
-  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:10px 0}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:10px 0;min-width:0}
   .tile{border:1px solid var(--rule);border-radius:4px;padding:10px 12px}
   .tile b{display:block;font-size:20px;font-variant-numeric:tabular-nums}
   .tile span{font-size:12px;color:var(--ink3)}
@@ -40,7 +44,7 @@
   .moves{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-top:10px}
   .move{border:1px solid var(--rule);border-radius:4px;padding:10px 12px;font-size:13px}
   .move b{display:block;margin-bottom:4px}
-  .charts{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .charts{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
   .chart{position:relative;height:280px}
   .status{display:inline-block;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:600;vertical-align:middle}
   .status.ok{background:#DFEDE6;color:var(--ok)} .status.watch{background:#FBEFD9;color:var(--warn)} .status.fire{background:#F3E0DB;color:var(--alert)}
@@ -57,7 +61,7 @@
   .player input[type=range]{flex:1;min-width:200px}
   .player .clock{font-variant-numeric:tabular-nums;font-weight:600;min-width:150px}
   pre.explain{white-space:pre-wrap;font:12px/1.5 ui-monospace,monospace;background:#F7F9FB;padding:10px;border-radius:4px;max-height:200px;overflow:auto}
-  .two{display:grid;grid-template-columns:1.2fr 1fr;gap:16px}
+  .two{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:16px}
   @media (max-width:900px){.charts,.two{grid-template-columns:1fr}}
 </style>
 </head>
@@ -198,9 +202,9 @@ function renderPlan(p) {
     <div class="row"><button id="btn-approve">Утвердить план</button><button class="secondary" id="btn-stress">Стресс-тест плана до запуска</button>${p.brief.budget_rub ? '<button class="secondary" id="btn-whatif">Что если бюджет −10 % / +10 %</button>' : ''}<span class="muted">Стресс-тест прогоняет план через все восемь шоков рынка и показывает, какие из них план выдерживает.</span></div>
     <div id="whatif"></div>
     <div id="stress"></div>
-    <div style="overflow:auto"><table><thead><tr><th>Канал</th><th>Бюджет, ₽</th><th>Доля</th><th>Показы</th><th>Охват</th><th>Клики</th><th>Конверсии</th><th>CTR</th><th>VTR</th><th>CR</th><th>CPM</th><th>CPC</th><th>CPA</th><th>Частота</th><th>Ёмкость</th><th>${marginalLabel(p.kpi_name)}</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="scroll"><table><thead><tr><th>Канал</th><th>Бюджет, ₽</th><th>Доля</th><th>Показы</th><th>Охват</th><th>Клики</th><th>Конверсии</th><th>CTR</th><th>VTR</th><th>CR</th><th>CPM</th><th>CPC</th><th>CPA</th><th>Частота</th><th>Ёмкость</th><th>${marginalLabel(p.kpi_name)}</th></tr></thead><tbody>${rows}</tbody></table></div>
     <p class="muted">Последний столбец сравнивает каналы между собой: у активных каналов цена следующей единицы почти одинакова, это признак оптимума. Канал у потолка дальше не масштабируется ни за какие деньги.</p>
-    <div style="overflow:auto"><table><thead><tr><th>Календарь, тыс. ₽ в день</th>${Array.from({length: days}, (_, i) => `<th>${i+1}</th>`).join('')}</tr></thead><tbody>${calRows}</tbody></table></div>
+    <div class="scroll"><table><thead><tr><th>Календарь, тыс. ₽ в день</th>${Array.from({length: days}, (_, i) => `<th>${i+1}</th>`).join('')}</tr></thead><tbody>${calRows}</tbody></table></div>
     <div class="charts"><div class="chart"><canvas id="c-plan-kpi"></canvas></div><div class="chart"><canvas id="c-plan-spend"></canvas></div></div>
     <details style="margin-top:10px"><summary>Почему такое распределение: порядок наливания</summary><pre class="explain">${p.explanation.join('\n')}</pre></details>`;
   const hours = p.trajectory.map(t => t.hour);
@@ -286,7 +290,7 @@ function prepareRun(r) {
     <div id="decision-banner"></div>
     <div class="charts"><div class="chart"><canvas id="c-run-kpi"></canvas></div><div class="chart"><canvas id="c-run-spend"></canvas></div></div>
     <div class="two" style="margin-top:14px">
-      <div><h3>Каналы в этот час</h3><div style="overflow:auto"><table id="hour-table"></table></div></div>
+      <div><h3>Каналы в этот час</h3><div class="scroll"><table id="hour-table"></table></div></div>
       <div><h3>Лента событий</h3><div class="feed" id="feed"></div><h3>Предложения и ходы автоматики</h3><div id="cards"></div></div>
     </div>
     <div class="chart" style="margin-top:14px;height:220px"><canvas id="c-run-stack"></canvas></div>
@@ -435,7 +439,7 @@ function renderSummary(r) {
       <div class="tile"><span>Ходов автоматики</span><b>${m.proposals.length}</b><span>обращений к человеку: ${v.human_requests}</span></div>
     </div>
     <h3>По каналам: обещали и получили</h3>
-    <div style="overflow:auto"><table><thead><tr><th>Канал</th><th>Бюджет по плану</th><th>Потрачено</th><th>Δ</th><th>${kpi} по плану</th><th>${kpi} получено</th><th>Δ</th></tr></thead><tbody>${perChannel}</tbody></table></div>
+    <div class="scroll"><table><thead><tr><th>Канал</th><th>Бюджет по плану</th><th>Потрачено</th><th>Δ</th><th>${kpi} по плану</th><th>${kpi} получено</th><th>Δ</th></tr></thead><tbody>${perChannel}</tbody></table></div>
     <h3>Хронология</h3>
     <div class="feed">${m.hours.flatMap(h=>h.events).map(e=>`<div>${e}</div>`).join('') || '<div class="muted">событий не было</div>'}</div>`;
 }
