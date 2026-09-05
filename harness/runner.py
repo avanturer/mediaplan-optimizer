@@ -26,6 +26,7 @@ from contracts import (
     ShockEvent,
 )
 from harness.metrics import coefficient_of_variation, final_deviation, mape, unsmoothness, wape
+from world.settings import WorldSettings
 from world.simulator import Simulator
 
 
@@ -39,6 +40,7 @@ class RunConfig:
     stop_at_first_event: bool = False
     hold_plan: bool = True  # adaptive: держать план (резерв) или выжимать максимум KPI
     approved_hours: tuple[int, ...] = ()  # ходы выше лимита, одобренные человеком (по часу карточки)
+    world_settings: WorldSettings | None = None
 
 
 def run_campaign(
@@ -51,7 +53,11 @@ def run_campaign(
     if not plan.is_feasible:
         raise ValueError("нельзя прогнать недостижимый план")
     started = time.perf_counter()
-    sim = simulator or Simulator(catalog)
+    if plan.catalog_id != catalog.catalog_id or plan.brief.targeting != catalog.targeting:
+        raise ValueError("для исполнения требуется каталог выбранного сегмента, использованный в плане")
+    if simulator is not None and config.world_settings is not None and simulator.settings != config.world_settings:
+        raise ValueError("настройки переданного симулятора расходятся с RunConfig")
+    sim = simulator or Simulator(catalog, settings=config.world_settings)
     horizon = len(plan.trajectory)
     total_budget = plan.total_budget_rub
     channel_ids = [a.channel_id for a in plan.allocations]
@@ -66,7 +72,8 @@ def run_campaign(
     )
     executor: BaseExecutor = make_executor(config.strategy, plan, catalog, curves, total_budget, **kwargs)
 
-    sim.reset(config.seeds, config.scenario_id, horizon_hours=horizon, total_budget=total_budget, channel_ids=channel_ids)
+    sim.reset(config.seeds, config.scenario_id, horizon_hours=horizon, total_budget=total_budget, channel_ids=channel_ids,
+              targeting=plan.brief.targeting)
     for event in config.injected:
         sim.inject_shock(event)
 
@@ -108,10 +115,13 @@ def run_campaign(
                         "conversions": ch.conversions,
                         "spend": ch.spend,
                         "ecpm": ch.ecpm,
+                        "fraud_share": ch.fraud_share,
+                        "verified_impressions": ch.verified_impressions,
                     }
                     for cid, ch in obs.by_channel.items()
                 },
                 caps=decision.action,
+                deduplicated_reach=obs.total_reach,
                 status=decision.status,
                 events=events,
                 tracking_error_spend=decision.tracking_error_spend,

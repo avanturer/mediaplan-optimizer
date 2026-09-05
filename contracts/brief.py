@@ -5,6 +5,8 @@ from enum import StrEnum
 
 from pydantic import BaseModel, Field, model_validator
 
+from contracts.targeting import AudienceTargeting
+
 
 class Objective(StrEnum):
     """Что максимизируем в постановке типа A."""
@@ -34,6 +36,7 @@ class Brief(BaseModel):
     target_value: float | None = Field(default=None, gt=0)
 
     objective: Objective = Objective.MAX_CONVERSIONS
+    targeting: AudienceTargeting = Field(default_factory=AudienceTargeting)
     horizon_days: int = Field(ge=1, le=90)
     start_at: datetime = Field(default_factory=lambda: datetime(2026, 9, 14))
     channel_ids: list[str] = Field(min_length=1, description="набор каналов из пресета")

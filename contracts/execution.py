@@ -90,6 +90,7 @@ class HourRecord(BaseModel):
     tracking_error_spend: float = 0.0
     tracking_error_kpi: float = 0.0
     reserve_rub: float = 0.0
+    deduplicated_reach: int = 0
 
 
 class RunSummary(BaseModel):

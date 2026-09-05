@@ -1,0 +1,13 @@
+meta:
+  status: assumed
+  note: "Синтетические параметры расширения по обсуждению с Никитой, 2026-09-05. Не статистика площадок."
+  sources: docs/world/EXTENSIONS.md
+targeting:
+  # Независимые измерения в MVP. Доли суммируются в 1 внутри каждого измерения.
+  age_groups: {"18_24": 0.15, "25_34": 0.25, "35_44": 0.25, "45_54": 0.20, "55_plus": 0.15}
+  genders: {female: 0.52, male: 0.48}
+  geo: {capital: 0.15, large_cities: 0.35, other_regions: 0.50}
+  geo_price: {capital: 1.40, large_cities: 1.10, other_regions: 0.81}
+  scarcity_elasticity: 0.15
+  max_price_multiplier: 2.5
+  note: "Узкий таргетинг уменьшает ёмкость; направление изменения CPM — допущение, не правило Директа."

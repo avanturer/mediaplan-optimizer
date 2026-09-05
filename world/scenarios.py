@@ -12,6 +12,16 @@ MID_HORIZON_HOUR = 240  # десятые сутки 21-дневной кампа
 
 SCENARIOS: dict[str, Scenario] = {
     "stable": Scenario(scenario_id="stable", events=[]),
+    "fraud_surge": Scenario(
+        scenario_id="fraud_surge",
+        events=[ShockEvent(start_hour=240, duration_hours=48, target_channels=["programmatic"],
+                           parameter=ShockParameter.FRAUD, multiplier=10.0, recovery="linear")],
+    ),
+    "sms_weekly_limit": Scenario(
+        scenario_id="sms_weekly_limit",
+        events=[ShockEvent(start_hour=168, duration_hours=168, target_channels=["sms"],
+                           parameter=ShockParameter.SMS_WEEKLY_LIMIT, multiplier=0.5)],
+    ),
     "ctr_drop": Scenario(
         scenario_id="ctr_drop",
         events=[

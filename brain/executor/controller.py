@@ -107,11 +107,11 @@ class BaseExecutor:
     def observe(self, obs: Observation) -> list[str]:
         """Принимает факт завершённого часа; возвращает события, требующие внимания."""
         fired: list[str] = []
+        self.fact_cum_kpi += kpi_of_observation(obs, self.kpi)
         for cid in self.channel_ids:
             ch = obs.by_channel[cid]
             self.fact_cum_by_channel[cid] += ch.spend
             self.fact_cum_spend += ch.spend
-            self.fact_cum_kpi += _kpi_of(ch, self.kpi)
             if self.estimates[cid].observe(ch, self.kpi, obs.hour):
                 fired.append(cid)
                 self.detection_hours.setdefault(cid, obs.hour)
@@ -522,6 +522,8 @@ def make_executor(name: str, plan: MediaPlan, catalog: PublicCatalog, curves: di
 
 
 def kpi_of_observation(obs: Observation, kpi: str) -> float:
+    if kpi == "reach":
+        return float(obs.total_reach)
     return float(sum(_kpi_of(ch, kpi) for ch in obs.by_channel.values()))
 
 

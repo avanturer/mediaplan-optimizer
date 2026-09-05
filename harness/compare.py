@@ -15,6 +15,7 @@ import numpy as np
 from brain.curves import ResponseCurve
 from contracts import MediaPlan, PublicCatalog, RunSummary, SeedBundle, ShockEvent
 from harness.runner import RunConfig, run_campaign
+from world.settings import WorldSettings
 from world.simulator import Simulator
 
 METRICS = ("mape_spend", "mape_kpi", "wape_spend", "wape_kpi", "final_deviation_spend", "final_deviation_kpi", "unsmoothness", "lambda_cv")
@@ -54,8 +55,9 @@ def compare_strategies(
     injected: list[ShockEvent] | None = None,
     catalog_seed: int = 0,
     first_seed: int = 1,
+    world_settings: WorldSettings | None = None,
 ) -> dict[str, StrategyStats]:
-    sim = Simulator(catalog)
+    sim = Simulator(catalog, settings=world_settings)
     results: dict[str, list[RunSummary]] = {s: [] for s in strategies}
     for k in range(first_seed, first_seed + seeds):
         bundle = SeedBundle(catalog_seed=catalog_seed, world_seed=k, noise_seed=10_000 + k)

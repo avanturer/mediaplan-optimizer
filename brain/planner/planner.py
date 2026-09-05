@@ -50,6 +50,8 @@ class PlanningContext:
 
 
 def plan(brief: Brief, catalog: PublicCatalog, curves: dict[str, ResponseCurve]) -> MediaPlan:
+    if brief.targeting != catalog.targeting:
+        raise ValueError("таргетинг брифа и каталога должен совпадать; соберите ретро-историю выбранного сегмента")
     missing = [cid for cid in brief.channel_ids if cid not in curves]
     if missing:
         raise ValueError(f"нет кривых для каналов {missing}")
@@ -286,6 +288,7 @@ def _assemble(brief: Brief, catalog: PublicCatalog, ctx: PlanningContext, models
         ),
     )
     explanation = list(result.steps)
+    explanation.append("Прогноз охвата суммирует каналы и не учитывает межканальные пересечения; фактический охват кампании дедуплицируется.")
     if result.unspent > 0:
         explanation.append(
             f"не распределено {result.unspent:,.0f} ₽: все каналы упёрлись в потолок или в лимит цены"

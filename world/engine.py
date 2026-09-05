@@ -23,6 +23,7 @@ from contracts.catalog import ChannelFamily
 from contracts.simulation import ChannelObservation, ShockParameter
 from world.params import HiddenChannelParams
 from world.rng import keyed_rng
+from world.settings import WorldSettings
 
 _NORMAL = NormalDist()
 
@@ -34,6 +35,10 @@ class ChannelState:
     reached: float = 0.0  # накопленный уникальный охват
     cum_impressions: float = 0.0
     sms_sent_in_cycle: int = 0  # сколько сообщений отправлено в текущем цикле cooldown
+    sms_cycle: int = -1
+    sms_sent_in_week: int = 0
+    sms_week: int = -1
+    human_impressions_last_hour: int = 0
 
     @property
     def frequency(self) -> float:
@@ -94,8 +99,11 @@ def step_channel(
     shock: dict[ShockParameter, float],
     noise: dict[str, float],
     noise_seed: int,
+    settings: WorldSettings | None = None,
 ) -> ChannelObservation:
     """Разыгрывает час для одного канала и обновляет его состояние на месте."""
+    settings = settings or WorldSettings()
+    state.human_impressions_last_hour = 0
     if shock.get(ShockParameter.PAUSE) is not None:
         return ChannelObservation(
             requests=0, impressions=0, unique_reach=0, clicks=0, conversions=0, spend=0.0, ecpm=0.0
@@ -109,7 +117,8 @@ def step_channel(
     cvr_factor = shock.get(ShockParameter.CVR, 1.0) * noise["cvr"]
 
     if params.family is ChannelFamily.DIRECT:
-        return _step_sms(params, state, hour, cap_rub, inventory_factor, ctr_factor, cvr_factor, noise_seed)
+        return _step_sms(params, state, hour, cap_rub, inventory_factor, ctr_factor, cvr_factor, noise_seed,
+                         shock.get(ShockParameter.SMS_WEEKLY_LIMIT))
 
     lam = params.daily_requests * params.hourly_profile[hour_of_week] * demand_factor * inventory_factor
     requests = int(keyed_rng(noise_seed, hour, params.channel_id, "traffic").poisson(max(lam, 0.0)))
@@ -122,16 +131,24 @@ def step_channel(
         spend = cap_rub
     ecpm = spend / impressions * 1000 if impressions else 0.0
 
-    new_reach = reach_increment(params.unique_pool, state.reached, impressions)
+    fraud_rate = min(settings.fraud_baseline * shock.get(ShockParameter.FRAUD, 1.0), 1.0) if params.channel_id == "programmatic" else 0.0
+    bots = int(keyed_rng(noise_seed, hour, params.channel_id, "fraud").binomial(impressions, fraud_rate))
+    human_impressions = impressions - bots
+    state.human_impressions_last_hour = human_impressions
+    new_reach = reach_increment(params.unique_pool, state.reached, human_impressions)
     unique_reach = min(int(round(new_reach)), impressions)
     state.reached += unique_reach
-    state.cum_impressions += impressions
+    state.cum_impressions += human_impressions
 
     ctr = params.base_ctr * ctr_factor / (1 + params.fatigue_delta * max(state.frequency - 1, 0.0))
     ctr = min(max(ctr, 0.0), 1.0)
-    clicks = int(keyed_rng(noise_seed, hour, params.channel_id, "click").binomial(impressions, ctr))
+    human_clicks = int(keyed_rng(noise_seed, hour, params.channel_id, "click").binomial(human_impressions, ctr))
+    bot_clicks = int(keyed_rng(noise_seed, hour, params.channel_id, "bot_click").binomial(bots, settings.bot_ctr))
+    clicks = human_clicks + bot_clicks
     cvr = min(max(params.base_cvr * cvr_factor, 0.0), 1.0)
-    conversions = int(keyed_rng(noise_seed, hour, params.channel_id, "conversion").binomial(clicks, cvr))
+    conversions = int(keyed_rng(noise_seed, hour, params.channel_id, "conversion").binomial(human_clicks, cvr))
+    flagged = int(keyed_rng(noise_seed, hour, params.channel_id, "fraud_detect").binomial(bots, settings.fraud_detection_rate))
+    flagged += int(keyed_rng(noise_seed, hour, params.channel_id, "fraud_false_positive").binomial(human_impressions, settings.fraud_false_positive_rate))
 
     return ChannelObservation(
         requests=requests,
@@ -141,6 +158,8 @@ def step_channel(
         conversions=conversions,
         spend=spend,
         ecpm=ecpm,
+        fraud_share=flagged / impressions if impressions else 0.0,
+        verified_impressions=impressions - flagged,
     )
 
 
@@ -153,14 +172,20 @@ def _step_sms(
     ctr_factor: float,
     cvr_factor: float,
     noise_seed: int,
+    weekly_factor: float | None = None,
 ) -> ChannelObservation:
     """SMS: пакет отправок в окне 9–21, не больше дневной квоты базы и остатка цикла."""
     hour_of_day = hour % 24
     start, end = params.sms_send_hours
     window = max(end - start, 1)
     cycle_hours = params.sms_cooldown_days * 24
-    if hour % cycle_hours == 0:
+    if state.sms_cycle != hour // cycle_hours:
+        state.sms_cycle = hour // cycle_hours
         state.sms_sent_in_cycle = 0
+    week = hour // 168
+    if state.sms_week != week:
+        state.sms_week = week
+        state.sms_sent_in_week = 0
     if not (start <= hour_of_day < end):
         return ChannelObservation(
             requests=0, impressions=0, unique_reach=0, clicks=0, conversions=0, spend=0.0, ecpm=0.0
@@ -169,11 +194,16 @@ def _step_sms(
     hourly_quota = int(daily_quota / window)
     left_in_cycle = max(int(params.sms_base_size * inventory_factor) - state.sms_sent_in_cycle, 0)
     requests = min(hourly_quota, left_in_cycle)
+    if weekly_factor is not None:
+        weekly_limit = int(params.sms_base_size * 7 / params.sms_cooldown_days * weekly_factor)
+        requests = min(requests, max(weekly_limit - state.sms_sent_in_week, 0))
     affordable = int(cap_rub // params.sms_price) if params.sms_price > 0 else 0
     sent = max(min(requests, affordable), 0)
     delivered = int(keyed_rng(noise_seed, hour, params.channel_id, "delivery").binomial(sent, params.sms_deliverability))
     spend = sent * params.sms_price
     state.sms_sent_in_cycle += sent
+    state.sms_sent_in_week += sent
+    state.human_impressions_last_hour = delivered
 
     new_reach = reach_increment(params.unique_pool, state.reached, delivered)
     unique_reach = min(int(round(new_reach)), delivered)
@@ -194,4 +224,5 @@ def _step_sms(
         conversions=conversions,
         spend=spend,
         ecpm=ecpm,
+        verified_impressions=delivered,
     )
