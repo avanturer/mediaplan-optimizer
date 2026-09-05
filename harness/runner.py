@@ -39,6 +39,7 @@ class RunConfig:
     stop_at_first_event: bool = False
     hold_plan: bool = True  # adaptive: держать план (резерв) или выжимать максимум KPI
     approved_hours: tuple[int, ...] = ()  # ходы выше лимита, одобренные человеком (по часу карточки)
+    rejected_hours: tuple[int, ...] = ()  # ходы, отклонённые или откаченные человеком: не применяются, донор заморожен
 
 
 def run_campaign(
@@ -60,6 +61,7 @@ def run_campaign(
             "auto_apply_above_limit": config.auto_apply_above_limit,
             "hold_plan": config.hold_plan,
             "approved_hours": set(config.approved_hours),
+            "rejected_hours": set(config.rejected_hours),
         }
         if config.strategy == "adaptive"
         else {}

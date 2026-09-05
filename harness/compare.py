@@ -41,6 +41,18 @@ class StrategyStats:
             "win_rate_vs_static": self.win_rate_vs_static,
             "mean_actual_kpi": float(np.mean([r.actual_kpi for r in self.runs])),
             "mean_actual_spend": float(np.mean([r.actual_spend for r in self.runs])),
+            # распределение по мирам, а не только среднее: гистограмма отклонений для стенда
+            "per_run": [
+                {
+                    "world_seed": r.world_seed,
+                    "final_deviation_kpi": r.final_deviation_kpi,
+                    "final_deviation_spend": r.final_deviation_spend,
+                    "actual_kpi": r.actual_kpi,
+                    "actual_spend": r.actual_spend,
+                    "detection_hours": dict(r.detection_hours),
+                }
+                for r in self.runs
+            ],
         }
 
 

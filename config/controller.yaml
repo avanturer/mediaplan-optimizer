@@ -90,16 +90,41 @@ detector:
     status: calibrated
     test: "tests/test_executor.py::test_detector_silent_without_shock"
     note: "падение должно держаться полсуток подряд, иначе один неудачный час или день считается шумом"
-  discount_on_shock:
-    value: 0.15
-    status: calibrated
-    test: "tests/test_executor.py::test_estimates_reset_after_shock"
-    note: "после срабатывания от накопленной статистики канала остаётся 15 %: оценка разворачивается за часы, а не за неделю"
   shock_status_hours:
     value: 24
     status: calibrated
     test: "tests/test_executor.py::test_detector_catches_ctr_drop"
     note: "сколько часов после срабатывания канал считается «в пожаре»; потом новый режим принят как норма"
+  rise_threshold:
+    value: 0.30
+    status: sourced
+    source_url: "https://improvado.io/blog/campaign-monitoring-and-anomaly-detection"
+    note: "скачок CTR (клики на показ) на 30 % и значимый на 3σ: аномалия в обе стороны; держатель кейса на чекпоинте 04.09 предложил тот же порог для роста CTR как признака фрода"
+  kpi_window_hours:
+    value: 72
+    status: calibrated
+    test: "tests/test_executor.py::test_kpi_detector_catches_cvr_drop"
+    note: "детектор по конверсиям на рубль: при ~13 конверсиях в сутки на канал трое суток дают ~40 событий, пуассоновский разброс ~16 %, порог 30 % это около 2σ"
+  kpi_baseline_hours:
+    value: 120
+    status: calibrated
+    test: "tests/test_executor.py::test_detector_silent_without_shock"
+    note: "база пять суток: достаточно конверсий и ещё не ушла усталость; первое возможное срабатывание на восьмые сутки"
+  kpi_z_threshold:
+    value: 3.0
+    status: sourced
+    source_url: "https://en.wikipedia.org/wiki/68%E2%80%9395%E2%80%9399.7_rule"
+    note: "падение по конверсиям засчитывается, если доля событий окна значимо ниже ожидаемой на 3σ (условный биномиальный тест двух пуассоновских счётчиков); в маленьких каналах детектор молчит честно"
+  min_expected_events:
+    value: 10
+    status: sourced
+    source_url: "https://en.wikipedia.org/wiki/Binomial_distribution#Normal_approximation"
+    note: "нормальное приближение биномиального теста допустимо при np ≥ 10 и n(1−p) ≥ 10 с каждой стороны; ниже детектор молчит"
+  kpi_confirm_hours:
+    value: 24
+    status: calibrated
+    test: "tests/test_executor.py::test_detector_silent_without_shock"
+    note: "падение отдачи по конверсиям должно держаться сутки: событий мало, подтверждение длиннее, чем по кликам"
 
 controller:
   dead_zone:
@@ -126,7 +151,7 @@ controller:
     value: 0.30
     status: sourced
     source_url: "https://developers.google.com/meridian/docs/user-guide/budget-optimization-scenarios"
-    note: "Meridian: spend_constraint_lower/upper по умолчанию ±30 % от текущей доли канала"
+    note: "Meridian: spend_constraint_lower/upper по умолчанию ±30 % от текущей доли канала; у нас за сутки (доля на начало суток), а не за каждое перерешение"
   pause_after_hours:
     value: 3
     status: calibrated

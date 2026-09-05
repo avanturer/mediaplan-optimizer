@@ -26,3 +26,7 @@ def fatigue_delta() -> float:
 
 def campaign_audience_multiplier() -> float:
     return float(_load()["audience_scale"]["campaign_audience_multiplier"]["value"])
+
+
+def video_vtr() -> float:
+    return float(_load()["video_vtr"]["by_channel"]["social_video"]["value"])

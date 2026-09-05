@@ -13,7 +13,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from brain.assumptions import campaign_audience_multiplier, fatigue_delta
+from brain.assumptions import campaign_audience_multiplier, fatigue_delta, video_vtr
 from brain.config import CORRIDOR_SIGMA_DIVISOR
 from brain.curves import ResponseCurve
 from brain.planner.allocator import AllocationResult, ChannelModel, allocate, build_models
@@ -130,7 +130,7 @@ def _diagnose(brief: Brief, catalog: PublicCatalog, ctx: PlanningContext, models
     budget_for_reachable = _min_budget_for(models, reachable, kpi, brief.locked, brief.max_cpa_rub)
     suggestions.append(
         BriefSuggestion(
-            description=f"Снизить цель до {reachable:,.0f} {kpi} в срок",
+            description=f"Снизить цель до {reachable:,.0f} {kpi} при тех же каналах и сроке",
             changed_field="target_value",
             suggested_value=float(round(reachable)),
             expected_kpi=float(reachable),
@@ -243,7 +243,7 @@ def _assemble(brief: Brief, catalog: PublicCatalog, ctx: PlanningContext, models
                 conversions=float(out.conversions),
                 ctr=float(out.clicks / out.impressions) if out.impressions else 0.0,
                 cvr=float(out.conversions / out.clicks) if out.clicks else 0.0,
-                vtr=0.35 if channel.supports_video else None,
+                vtr=video_vtr() if channel.supports_video else None,
                 cpm_rub=float(spend_eff / out.impressions * 1000) if out.impressions else 0.0,
                 cpc_rub=float(spend_eff / out.clicks) if out.clicks else None,
                 cpa_rub=float(spend_eff / out.conversions) if out.conversions else None,

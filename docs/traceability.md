@@ -22,6 +22,12 @@
 | С5 | человек в контуре: одобрить или отклонить ход выше лимита, цена решения по факту | `app/main.py: /api/run/{id}/decide`, `AdaptiveExecutor.approved_hours`, `tests/test_executor.py::test_human_approval_*` | кнопки «Одобрить ход» и «Отклонить», баннер «цена решения по факту» |
 | С4 | сводка на текущий час: что произошло и что делать | `index.html: digest` | блок «Сводка на день N» под плитками |
 | С6 | граница применимости: при какой силе шока решение ломается | `app/main.py: /api/degradation` | кнопка «Где ломается решение», график и таблица |
+| С5 | откат применённого хода: перепрогон без него, донор заморожен | `harness/runner.py: RunConfig.rejected_hours`, `AdaptiveExecutor.rejected_hours`, `tests/test_executor.py::test_rejected_hours_revert_a_move` | кнопка «Откатить» в карточке (кабинет, ветка Георгия) |
+| С5 | пока ход ждёт решения, автоматика не добирает его частями | `AdaptiveExecutor.frozen_donors`, `tests/test_executor.py::test_pending_card_freezes_donor` | карточка «ждёт решения», деньги остаются в канале |
+| С4 | карточка в час слома, даже если переносить некуда: «держим, потому что…» | `AdaptiveExecutor._emit_hold_cards`, `Proposal.cause_kind` | карточка с нулевой суммой и объяснением |
+| С4 | детектор по KPI кейса (конверсии на рубль) с тестом значимости | `brain/executor/estimator.py: kpi_detector`, `config/controller.yaml: detector.kpi_*` | событие «конверсии на рубль упали» |
+| С4 | скачок CTR как признак фрода: канал помечен, деньги не добавляются | `DropDetector._ctr_jump`, `ChannelEstimate.suspicious` | событие «похоже на фрод», карточка `rise` |
+| С6 | распределение отклонений по сотням миров, а не среднее | `harness/compare.py: per_run`, `scripts/run_demos.py --seeds 100` | гистограммы `docs/figures/stand_hist_*.png` |
 | С5 | контрфактный двойник на том же сиде | `harness/runner.py` + `world/rng.py` (общие случайные числа) | линия «факт · заморозка» на графиках |
 | С6 | итог: обещали / получили, MAPE, рубли, обращения к человеку, хронология | `app/main.py: _verdict`, `index.html: renderSummary` | раздел «Итог», строка «Для рекламодателя», таблица по каналам |
 | С6 | доказательство на многих мирах, а не на одном | `harness/compare.py` | «Сравнить стратегии на 20 мирах» |
