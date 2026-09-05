@@ -41,15 +41,15 @@ from harness.runner import RunConfig, run_campaign
 from world import SCENARIOS, build_catalog
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
-CASE_DEVIATION_THRESHOLD = 0.20  # порог приёмки кейса: отклонение в конце не более 20 %
+CASE_DEVIATION_THRESHOLD = 0.20  # порог приёмки кейса: отклонение в конце не более 20 %
 MAX_RUNS_IN_MEMORY = 50  # прогон весит около мегабайта; каждое «Перенести» создаёт новый
 MAX_HORIZON_DAYS = 30  # кейс: 14–21 день; мир откалиброван на этот масштаб
 MAX_CUSTOM_SHOCKS = 3  # своих шоков за прогон; harness принимает список любой длины
 
 Strategy = Literal["static", "proportional_pacing", "pid", "adaptive"]
 STRATEGY_TITLES = {
-    "adaptive": "с перераспределением",
-    "static": "без перераспределения (план буквально)",
+    "adaptive": "наше ведение",
+    "static": "план без изменений",
     "pid": "ПИД-регулятор темпа",
     "proportional_pacing": "пропорциональный темп",
 }
@@ -64,10 +64,10 @@ PRESETS: dict[str, dict[str, Any]] = {
 
 SCENARIO_TITLES = {
     "stable": "спокойный рынок",
-    "ctr_drop": "CTR −40 % в крупном маркетплейсе",
+    "ctr_drop": "CTR −40 % в крупном маркетплейсе",
     "cpm_spike": "CPM ×2 в крупном маркетплейсе",
     "cpm_spike_recovery": "CPM ×1.4 на двое суток с восстановлением",
-    "cvr_drop": "CR −40 % в маркетплейсе",
+    "cvr_drop": "CR −40 % в маркетплейсе",
     "capacity_cut": "база SMS сжалась вдвое на четверо суток",
     "channel_pause": "programmatic выключен на трое суток",
     "demand_surge": "всплеск спроса в соцсетях на двое суток",
@@ -127,7 +127,7 @@ RU_RULES = {
 
 def _rub(value: float) -> str:
     """Рубли с пробелом-разделителем тысяч, как принято в русской типографике."""
-    return f"{value:,.0f}".replace(",", " ") + " ₽"
+    return f"{value:,.0f}".replace(",", " ") + "\u00a0₽"
 
 
 def _ru_errors(errors: list[dict[str, Any]]) -> str:

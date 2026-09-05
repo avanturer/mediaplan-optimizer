@@ -43,8 +43,9 @@
   /* Поле формы — сетка из трёх строк: подпись, контрол, слот под подсказку.
      Слот есть всегда, поэтому инпуты стоят на одной линии, есть подсказка или нет. */
   .row{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:start}
-  .row > button{margin-top:22px}
-  .row > .muted,.row > .err{margin-top:29px}
+  .row:has(label) > button{margin-top:22px}
+  .row:has(label) > .muted,.row:has(label) > .err{margin-top:29px}
+  .row:not(:has(label)){align-items:center}
   label{display:grid;grid-template-rows:18px auto minmax(14px,auto);gap:4px;font-size:12px;color:var(--ink3);align-content:start}
   label > span:first-child{line-height:18px;white-space:nowrap}
   /* width:0 + min-width:100% — подсказка не раздувает поле, а занимает ширину контрола */
@@ -138,27 +139,27 @@
 <header>
   <h1><img class="logo" src="/static/logo.svg" alt="" width="28" height="28">MediaPlan Optimizer</h1>
   <span class="tagline">план → утверждение → ведение по часам · данные синтетические</span>
-  <span class="examples">Примеры брифа: <button class="small secondary" id="btn-demo1">1,2 млн ₽ на 21 день</button><button class="small secondary" id="btn-demo2">50 000 кликов за 14 дней</button></span>
+  <span class="examples">Примеры брифа: <button class="small secondary" id="btn-demo1">1,2 млн ₽ на 21 день</button><button class="small secondary" id="btn-demo2">50 000 кликов за 14 дней</button></span>
 </header>
 <nav class="stages"><div class="in">
   <div class="stage cur" data-go="brief"><b>1 · Бриф</b><small id="st-brief">цель, бюджет, срок, каналы</small></div>
   <div class="stage off" data-go="plan"><b>2 · План</b><small id="st-plan">после расчёта</small></div>
   <div class="stage off" data-go="run"><b>3 · Ведение</b><small id="st-run">после утверждения</small></div>
   <div class="stage off" data-go="summary"><b>4 · Итог</b><small id="st-summary">в конце кампании</small></div>
-  <div class="seg" title="Кабинет — для рекламодателя: план, кампания, итог. Стенд — сценарии рынка, зёрна, стратегии, проверки на многих мирах"><button class="on" data-level="simple">Кабинет</button><button data-level="tech">Стенд</button></div>
+  <div class="seg" title="Кабинет — для рекламодателя: план, кампания, итог. Стенд — сценарии рынка, стратегии, проверка на многих прогонах"><button class="on" data-level="simple">Кабинет</button><button data-level="tech">Стенд</button></div>
 </div></nav>
 <main>
 
 <section id="brief">
   <h2><span class="num">1</span>Бриф <small>что нужно рекламодателю</small></h2>
   <div class="row">
-    <label>Постановка<select id="mode"><option value="A">Есть бюджет: максимум результата</option><option value="B">Есть цель: нужен бюджет</option></select></label>
-    <label id="f-budget">Бюджет, ₽<input id="budget" type="number" value="1200000" step="10000"></label>
+    <label>Задача<select id="mode"><option value="A">Есть бюджет: максимум результата</option><option value="B">Есть цель: нужен бюджет</option></select></label>
+    <label id="f-budget">Бюджет, ₽<input id="budget" type="number" value="1200000" step="10000"></label>
     <label id="f-objective">Что максимизируем<select id="objective"><option value="max_conversions">конверсии</option><option value="max_clicks">клики</option><option value="max_reach">охват</option></select></label>
-    <label id="f-tkpi" hidden>Цель в чём<select id="target_kpi"><option value="clicks">клики</option><option value="conversions">конверсии</option><option value="reach">охват</option></select></label>
-    <label id="f-tval" hidden>Целевой объём<input id="target_value" type="number" value="50000" step="1000"></label>
-    <label>Срок, дней<input id="horizon" type="number" value="21" min="1" max="30" style="min-width:100px"><span class="hint">в кейсе 14–21</span></label>
-    <label>Обещание клиенту<select id="promise"><option value="median">по прогнозу</option><option value="cautious">с запасом</option></select><span class="hint">с запасом — нижняя граница разброса</span></label>
+    <label id="f-tkpi" hidden>Что нужно<select id="target_kpi"><option value="clicks">клики</option><option value="conversions">конверсии</option><option value="reach">охват</option></select></label>
+    <label id="f-tval" hidden>Сколько нужно<input id="target_value" type="number" value="50000" step="1000"></label>
+    <label>Срок, дней<input id="horizon" type="number" value="21" min="1" max="30" style="min-width:100px"><span class="hint">обычно 14–21</span></label>
+    <label>Обещание<select id="promise"><option value="median">по прогнозу</option><option value="cautious">с запасом</option></select><span class="hint">с запасом — обещаем по нижней границе прогноза</span></label>
     <button id="btn-plan">Рассчитать план</button>
   </div>
   <div class="block">
@@ -168,8 +169,9 @@
   </div>
   <details class="more"><summary>Дополнительно: потолок CPA и лимит автоматики</summary>
     <div class="row">
-      <label>Потолок CPA, ₽<input id="max_cpa" type="number" placeholder="без ограничения"><span class="hint">каналы дороже этой цены за результат не получат бюджет</span></label>
-      <label>Лимит автоматики за один ход, ₽<input id="auto_limit" type="number" placeholder="без лимита"><span class="hint">переносы дороже этой суммы ждут вашего решения; пусто — автоматика решает сама</span></label>
+      <label>Потолок CPA, ₽<input id="max_cpa" type="number" placeholder="без ограничения"><span class="hint">каналы дороже этой цены за результат не получат бюджет</span></label>
+      <label>Лимит на один перенос, ₽<input id="auto_limit" type="number" placeholder="без лимита"><span class="hint">дороже — ждёт вашего решения; пусто — без лимита</span></label>
+      <label>Если план перевыполняется<select id="hold_plan"><option value="true">вернуть неизрасходованное</option><option value="false">потратить весь бюджет</option></select></label>
     </div>
   </details>
   <p class="muted" id="brief-note"></p>
@@ -181,7 +183,7 @@
 </section>
 
 <section id="run" hidden>
-  <h2><span class="num">3</span>Ведение кампании <small>кампания по часам: план, факт, ходы</small><span class="planref" id="run-plan-ref"></span></h2>
+  <h2><span class="num">3</span>Ведение кампании <small>кампания по часам: план, факт, переносы</small><span class="planref" id="run-plan-ref"></span></h2>
   <div class="tech">
     <div class="block" style="margin-top:0"><span class="lbl">Что случится на рынке</span><div class="opts" id="scenario-opts"></div></div>
     <div class="block"><span class="lbl">Свои шоки · <span class="muted">до трёх, поверх сценария</span></span>
@@ -199,8 +201,7 @@
   <div class="row" style="margin-top:14px"><button id="btn-run">Запустить кампанию</button><span class="muted" id="run-caption"></span></div>
   <details class="more tech"><summary>Дополнительно: стратегия, режим, зерно, стенды</summary>
     <div class="row">
-      <label>Ведение<select id="strategy"></select><span class="hint">базовые стратегии — для сравнения, не для показа</span></label>
-      <label>Если план перевыполняется<select id="hold_plan"><option value="true">вернуть неизрасходованное</option><option value="false">потратить весь бюджет</option></select></label>
+      <label>Ведение<select id="strategy"></select><span class="hint">базовые — только для сравнения</span></label>
       <label>Зерно мира<input id="world_seed" type="number" value="1" class="short"><span class="hint">то же зерно — тот же мир</span></label>
       <button class="secondary" id="btn-compare">Сравнить стратегии на 20 мирах</button>
       <button class="secondary" id="btn-degrade">Где ломается решение</button>
@@ -217,9 +218,9 @@
 </main>
 <script>
 const $ = (s) => document.querySelector(s);
-const fmt = (n, d=0) => n == null || !isFinite(n) ? '—' : Number(n).toLocaleString('ru-RU', {maximumFractionDigits: d, minimumFractionDigits: d});
-const pct = (x, d=1) => x == null || !isFinite(x) ? '—' : (x*100).toFixed(d).replace('.', ',') + ' %';
-const rub = (n) => fmt(n) + ' ₽';
+const fmt = (n, d=0) => n == null || !isFinite(n) ? '—' : Number(n).toLocaleString('ru-RU', {maximumFractionDigits: d, minimumFractionDigits: d}).replace('-', '−');
+const pct = (x, d=1) => x == null || !isFinite(x) ? '—' : (x*100).toFixed(d).replace('.', ',').replace('-', '−') + '\u00a0%';
+const rub = (n) => fmt(n) + '\u00a0₽';
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const STATUS_RU = {ok:'в норме', watch:'наблюдаем', fire:'пожар'};
 const SHOCK_PARAM_RU = {ecpm:'цена (eCPM)', ctr:'кликабельность (CTR)', cvr:'конверсия (CR)', inventory:'инвентарь', demand:'спрос', pause:'пауза канала'};
@@ -337,30 +338,38 @@ function briefFromForm(overrides={}) {
   return {...req, ...overrides};
 }
 
+const setBusy = (b) => ['#btn-plan', '#btn-demo1', '#btn-demo2'].forEach(sel => $(sel).disabled = b);
+
 async function makePlan(overrides={}) {
-  $('#btn-plan').disabled = true; $('#brief-note').textContent = 'считаем…';
+  setBusy(true); $('#brief-note').textContent = 'считаем…';
   try {
     const t0 = performance.now(), cautious = $('#promise').value === 'cautious';
     let req = briefFromForm(overrides);
     let plan = await api('/api/plan', {body: req});
-    // «С запасом» в постановке B: бюджет считаем под цель, увеличенную на ширину коридора, обещаем исходную цель
+    // «С запасом» в постановке B: бюджет считаем под цель, увеличенную на ширину коридора, а обещаем исходную.
+    // Если план с резервом недостижим, остаёмся на медианном и говорим об этом, а не подменяем цель клиента
     if (cautious && req.mode === 'B' && !plan.infeasibility && !plan.is_empty) {
       const target = req.target_value, base = plan;
-      req = {...req, target_value: Math.round(target / (1 - plan.corridor_rel))};
-      plan = await api('/api/plan', {body: req});
-      plan._base = base; plan._promise = {mode: 'cautious', value: target};
+      const req2 = {...req, target_value: Math.round(target / (1 - plan.corridor_rel))};
+      const plan2 = await api('/api/plan', {body: req2});
+      if (plan2.infeasibility || plan2.is_empty) {
+        plan._promise = {mode: 'median', value: target};
+        plan._reserveNote = `Резерв недостижим: с этими каналами и сроком не набрать ${kpiN(req2.target_value, plan.kpi_name)} даже по медиане. Ниже план без запаса; чтобы обещать с запасом, добавьте каналы или срок.`;
+      } else {
+        plan = plan2; req = req2; plan._base = base; plan._promise = {mode: 'cautious', value: target}; plan._reserveOk = plan.forecast.p10 >= target;
+      }
     } else if (!plan.infeasibility && !plan.is_empty) {
       plan._promise = cautious ? {mode: 'cautious', value: plan.forecast.p10} : {mode: 'median', value: plan.forecast.p50};
     }
     plan._ms = performance.now() - t0; plan._req = req; PLAN = plan;
     renderPlan(PLAN); $('#brief-note').textContent = '';
   } catch (e) { $('#brief-note').innerHTML = `<span class="err">Не посчитали: ${esc(ru(e.message))}</span>`; }
-  $('#btn-plan').disabled = false;
+  setBusy(false);
 }
 
 function kpiOf(t, kpi) { return kpi === 'clicks' ? t.cum_clicks : kpi === 'reach' ? t.cum_reach : t.cum_conversions; }
 function allocKpi(a, kpi) { return kpi === 'clicks' ? a.clicks : kpi === 'reach' ? a.unique_reach : a.conversions; }
-function marginalLabel(kpi) { return kpi === 'conversions' ? h2('Цена след.', 'конверсии, ₽') : h2('Цена след. 1000', KPI[kpi].many + ', ₽'); }
+function marginalLabel(kpi) { return kpi === 'conversions' ? h2('Цена след.', 'конверсии, ₽') : h2('Цена след. 1000', KPI[kpi].many + ', ₽'); }
 function marginalValue(a, kpi) { return a.marginal_cost_per_1000_kpi_rub == null ? null : (kpi === 'conversions' ? a.marginal_cost_per_1000_kpi_rub / 1000 : a.marginal_cost_per_1000_kpi_rub); }
 
 function resetRun() {
@@ -375,16 +384,17 @@ function renderPlan(p) {
   const K = KPI[p.kpi_name], b = p.brief;
   $('#plan').hidden = false; $('#plan-id').innerHTML = `<span class="tech">план ${esc(p.plan_id)} · </span>цель: ${K.nomPl}`;
   $('#plan-approved').innerHTML = p.approved_version ? `<span class="badge">утверждён, версия ${p.approved_version}</span>` : '<span class="badge bad">не утверждён</span>';
-  stage('brief', `${b.budget_rub ? rub(b.budget_rub) : kpiN(b.target_value, p.kpi_name)} · ${days(b.horizon_days)} · ${b.channel_ids.length} кан.`, 'done');
+  const clientTarget = p._base ? p._promise.value : b.target_value;
+  stage('brief', `${b.budget_rub ? rub(b.budget_rub) : kpiN(clientTarget, p.kpi_name)} · ${days(b.horizon_days)} · ${b.channel_ids.length} ${pw(b.channel_ids.length, ['канал','канала','каналов'])}`, 'done');
   const body = $('#plan-body');
   resetRun();
   if (p.infeasibility) {
     const d = p.infeasibility, target = b.target_value, n = b.channel_ids.length;
     const cheapest = Math.min(...d.suggestions.map(s => s.expected_budget_rub));
-    stage('plan', `недостижимо · ${d.suggestions.length} ${pw(d.suggestions.length, ['ход','хода','ходов'])}`, 'cur');
-    body.innerHTML = `<div class="verdict"><b>Недостижимо.</b> С выбранными ${n} ${pw(n, ['каналом','каналами','каналами'])} за ${days(b.horizon_days)} максимум <b>${kpiN(d.max_achievable, p.kpi_name)}</b> — на ${pct(1 - d.max_achievable / target, 0)} меньше цели ${fmt(target)}. Упирается в: ${esc(d.binding_title || BINDING_RU[d.binding_constraint] || d.binding_constraint)}.</div>
-      <div class="moves">${d.suggestions.map((s,i)=>`<div class="move">${s.expected_budget_rub === cheapest ? '<span class="tag">дешевле всего</span>' : ''}<b>${esc(ru(s.description))}</b>ожидаем ${kpiN(s.expected_kpi, p.kpi_name, true)} при бюджете ${rub(s.expected_budget_rub)} <span class="muted">(≈ ${fmt(s.expected_budget_rub / s.expected_kpi)} ₽ за ${K.acc})</span><br>${s.applicable === false ? `<button class="small" disabled>Применить</button> <span class="muted">${esc(s.why_not || '')}</span>` : `<button class="small" data-i="${i}">Применить и пересчитать</button>`}</div>`).join('')}</div>
-      <p class="muted">Каждый ход уже посчитан — планер приносит клиенту выбор.</p>`;
+    stage('plan', `недостижимо · ${d.suggestions.length} ${pw(d.suggestions.length, ['вариант','варианта','вариантов'])}`, 'cur');
+    body.innerHTML = `<div class="verdict"><b>Недостижимо.</b> С ${n === 1 ? 'одним каналом' : n + ' каналами'} за ${days(b.horizon_days)} максимум <b>${kpiN(d.max_achievable, p.kpi_name)}</b> — на ${pct(1 - d.max_achievable / target, 0)} меньше цели ${fmt(target)}. Упирается в ${esc(d.binding_title || BINDING_RU[d.binding_constraint] || d.binding_constraint)}.</div>
+      <div class="moves">${d.suggestions.map((s,i)=>`<div class="move">${s.expected_budget_rub === cheapest ? '<span class="tag">дешевле всего</span>' : ''}<b>${esc(ru(s.description))}</b>ожидаем ${kpiN(s.expected_kpi, p.kpi_name, true)} при бюджете ${rub(s.expected_budget_rub)} <span class="muted">(≈ ${fmt(s.expected_budget_rub / s.expected_kpi, s.expected_budget_rub / s.expected_kpi < 10 ? 2 : 0)} ₽ за ${K.acc})</span><br>${s.applicable === false ? `<button class="small" disabled>Применить</button> <span class="muted">${esc(s.why_not || '')}</span>` : `<button class="small" data-i="${i}">Применить и пересчитать</button>`}</div>`).join('')}</div>
+      <p class="muted">Каждый вариант уже посчитан — выберите подходящий.</p>`;
     body.querySelectorAll('button[data-i]').forEach(bt => bt.onclick = () => applySuggestion(d.suggestions[+bt.dataset.i]));
     return;
   }
@@ -393,27 +403,27 @@ function renderPlan(p) {
   const busiest = p.allocations.reduce((m, a) => a.capacity_utilization > m.capacity_utilization ? a : m, p.allocations[0]);
   const cautious = pr.mode === 'cautious';
   const tiles = [
-    ['Прогноз', kpiN(f.p50, p.kpi_name), `${K.price} ${fmt(unit)} ₽` + (cautious ? (p._base ? ` · план с запасом ${pct(p.corridor_rel,0)} к цели ${fmt(pr.value)}` : '') : ' · это и обещаем клиенту'), 'plan first'],
-    ...(cautious ? [['Обещаем клиенту', kpiN(pr.value, p.kpi_name), p._base ? 'цель внутри разброса даже по нижней границе' : `с запасом ${pct(p.corridor_rel,0)}: нижняя граница разброса`, 'ok']] : []),
-    ['Разброс прогноза', fmt(f.p10) + ' – ' + fmt(f.p90), `±${pct(p.corridor_rel,0)}: одна σ из ширины диапазонов каталога`, ''],
-    ['Бюджет', rub(p.total_budget_rub), b.budget_rub ? 'задан брифом' : p._base ? `с резервом; без него ${rub(p._base.total_budget_rub)}` : 'медианный: цель выполняется в половине миров', 'plan'],
+    ['Прогноз', kpiN(f.p50, p.kpi_name), `${K.price} ${fmt(unit, unit < 10 ? 2 : 0)} ₽` + (cautious ? (p._base ? ` · план с запасом ${pct(p.corridor_rel,0)} к цели ${fmt(pr.value)}` : '') : ' · обещание — по прогнозу'), 'plan first'],
+    ...(cautious ? [['Обещаем', kpiN(pr.value, p.kpi_name), p._base ? (p._reserveOk ? 'цель внутри разброса даже по нижней границе' : 'резерв покрывает почти весь разброс') : `с запасом ${pct(p.corridor_rel,0)}: нижняя граница разброса`, 'ok']] : []),
+    ['Разброс прогноза', fmt(f.p10) + '–' + fmt(f.p90), `±${pct(p.corridor_rel,0)} — обычный разброс между кампаниями<span class="tech"> · одна σ из ширины диапазонов каталога</span>`, ''],
+    ['Бюджет', rub(p.total_budget_rub), b.budget_rub ? 'задан брифом' : p._base ? `с резервом; без него ${rub(p._base.total_budget_rub)}` : 'по медиане: цели хватит в половине случаев', 'plan'],
     ['Самый загруженный канал', pct(busiest.capacity_utilization, 0), esc(busiest.display_name) + ' — доля выкупленной аудитории', busiest.capacity_utilization >= 0.95 ? 'alert' : ''],
     ['Считалось', fmt(p._ms/1000, 2) + ' с', 'пересчёт брифа — секунда', 'ok tech'],
   ];
-  stage('plan', `прогноз ${kpiN(f.p50, p.kpi_name)} · не утверждён`, 'cur');
+  stage('plan', p.approved_version ? `утверждён · ${kpiN(f.p50, p.kpi_name)}` : `прогноз ${kpiN(f.p50, p.kpi_name)} · не утверждён`, p.approved_version ? 'done' : 'cur');
   const rows = p.allocations.map(a => `<tr><td>${esc(a.display_name)}${a.locked?' 🔒':''}</td><td>${fmt(a.budget_rub)}</td><td>${pct(a.budget_rub/p.total_budget_rub)}</td><td class="key">${fmt(marginalValue(a, p.kpi_name))}</td><td>${fmt(a.impressions)}</td><td>${fmt(a.unique_reach)}</td><td>${fmt(a.clicks)}</td><td>${fmt(a.conversions)}</td><td>${pct(a.ctr,2)}</td><td>${a.vtr!=null?pct(a.vtr,0)+'*':'—'}</td><td>${pct(a.cvr,2)}</td><td>${fmt(a.cpm_rub)}</td><td>${fmt(a.cpc_rub)}</td><td>${fmt(a.cpa_rub)}</td><td>${fmt(a.frequency,1)}</td><td>${pct(a.capacity_utilization,0)}</td></tr>`).join('');
   const nDays = b.horizon_days, channels = p.allocations.map(a=>a.channel_id);
   const cal = {}; for (const c of p.calendar) (cal[c.channel_id] ||= {})[c.day] = c.budget_rub;
   const calRows = channels.map(c => `<tr><td>${esc(nm(c))}</td>${Array.from({length: nDays}, (_, i) => `<td>${fmt((cal[c]||{})[i+1]/1000, 1)}</td>`).join('')}</tr>`).join('');
-  body.innerHTML = `<div class="tiles">${tiles.map(t=>`<div class="tile ${t[3]}"><span>${t[0]}</span><b>${t[1]}</b><span>${t[2]}</span></div>`).join('')}</div>
-    <div class="row"><button id="btn-approve">Утвердить план</button>${b.budget_rub ? '<button class="secondary" id="btn-whatif">Что если бюджет −10 % / +10 %</button>' : ''}<button class="secondary tech" id="btn-stress">Стресс-тест: прогнать план через шоки</button><span class="muted tech">до запуска: план проходит семь шоков рынка на одном мире, видно, какие выдерживает</span></div>
+  body.innerHTML = `${p._reserveNote ? `<div class="verdict note">${p._reserveNote}</div>` : ''}<div class="tiles">${tiles.map(t=>`<div class="tile ${t[3]}"><span>${t[0]}</span><b>${t[1]}</b><span>${t[2]}</span></div>`).join('')}</div>
+    <div class="row"><button id="btn-approve" ${p.approved_version ? 'hidden' : ''}>Утвердить план</button>${b.budget_rub ? '<button class="secondary" id="btn-whatif">Что если бюджет ±10 %</button>' : ''}<button class="secondary tech" id="btn-stress">Стресс-тест: прогнать план через шоки</button><span class="muted tech">до запуска: план проходит семь шоков рынка на одном мире, видно, какие выдерживает</span></div>
     <div id="whatif"></div>
     <div id="stress" class="tech"></div>
-    <div class="scroll"><table><thead><tr><th>Канал</th><th>Бюджет, ₽</th><th>Доля</th><th class="key">${marginalLabel(p.kpi_name)}</th><th>Показы</th><th>Охват</th><th>Клики</th><th>Конверсии</th><th>CTR</th><th>VTR*</th><th>CR</th><th>CPM</th><th>CPC</th><th>CPA</th><th>Частота</th><th>${h2('Выкуп', 'аудитории')}</th></tr></thead><tbody>${rows}</tbody></table></div>
-    <p class="muted">Выделенный столбец сравнивает каналы между собой: канал получает деньги, пока следующая ${K.one} в нём не дороже, чем в остальных. Где цена выше общей — канал остановлен перед изломом кривой из ретро-истории: следующий рубль там дал бы меньше. * VTR — допущение 35 % без публичного источника (config/assumptions.yaml); досмотры симулятор не моделирует.</p>
-    <details class="more"><summary>Календарь расходов по дням, тыс. ₽</summary>
+    <div class="scroll"><table><thead><tr><th>Канал</th><th>Бюджет, ₽</th><th>Доля</th><th class="key">${marginalLabel(p.kpi_name)}</th><th>Показы</th><th>Охват</th><th>Клики</th><th>Конверсии</th><th>CTR</th><th>VTR*</th><th>CR</th><th>CPM</th><th>CPC</th><th>CPA</th><th>Частота</th><th>${h2('Выкуп', 'аудитории')}</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <p class="muted">Выделенный столбец сравнивает каналы между собой: канал получает деньги, пока следующая ${K.one} в нём не дороже, чем в остальных.<span class="tech"> Где цена выше общей — канал остановлен перед изломом кривой из ретро-истории: следующий рубль там дал бы меньше.</span> * VTR — допущение 35 %<span class="tech"> без публичного источника (config/assumptions.yaml); досмотры симулятор не моделирует</span>.</p>
+    <details class="more"><summary>Календарь расходов по дням, тыс. ₽</summary>
       <div class="scroll"><table><thead><tr><th>Канал</th>${Array.from({length: nDays}, (_, i) => `<th>${i+1}</th>`).join('')}</tr></thead><tbody>${calRows}</tbody></table></div>
-      <p class="muted">Бюджет каждого канала разложен по дням равномерно, внутри суток — по профилю часа из ретро-истории. Недельного профиля объёма нет ни в плане, ни в мире симулятора (README, раздел «упрощено»).</p>
+      <p class="muted">Бюджет каждого канала разложен по дням равномерно, внутри дня — по часам активности.<span class="tech"> Недельного профиля объёма нет ни в плане, ни в мире симулятора (README, раздел «упрощено»).</span></p>
     </details>
     <div class="charts"><div class="chart"><canvas id="c-plan-kpi"></canvas></div><div class="chart"><canvas id="c-plan-spend"></canvas></div></div>
     <details class="more tech"><summary>Как распределяли: кому давали деньги первому</summary><pre class="explain">${esc(p.explanation.map(ru).join('\n'))}</pre></details>`;
@@ -427,8 +437,8 @@ function renderPlan(p) {
       {label: 'план, ' + K.many, data: p.trajectory.map(t => kpiOf(t, p.kpi_name)), borderColor: '#24486B', borderDash:[6,4]},
       {label: 'коридор −', data: p.trajectory.map(t => t.band_low_kpi), borderColor: '#B4BECB', borderWidth: 1},
       {label: 'коридор +', data: p.trajectory.map(t => t.band_high_kpi), borderColor: '#B4BECB', borderWidth: 1, fill: '-1', backgroundColor: 'rgba(36,72,107,.08)'},
-    ], 'Плановая траектория, ' + K.many + ': коридор ±' + pct(p.corridor_rel,0) + ' (1σ)');
-    lineChart('c-plan-spend', hours, [{label: 'план расхода, ₽', data: p.trajectory.map(t => t.cum_spend_rub), borderColor: '#24486B', borderDash:[6,4]}], 'Плановый накопительный расход');
+    ], 'План по ' + K.dat + ', разброс ±' + pct(p.corridor_rel,0));
+    lineChart('c-plan-spend', hours, [{label: 'план расхода, ₽', data: p.trajectory.map(t => t.cum_spend_rub), borderColor: '#24486B', borderDash:[6,4]}], 'Плановый накопительный расход');
   } catch (e) { console.error(e); }
   if (p.approved_version) showRunSection(p);
 }
@@ -476,14 +486,16 @@ function addShock() {
   if (!$('#shock_channel').value) { $('#shock-err').textContent = 'выберите канал'; return; }
   if (!(day >= 1 && day <= nDays)) { $('#shock-err').textContent = `день шока — от 1 до ${nDays}`; return; }
   if (!(mult > 0)) { $('#shock-err').textContent = 'сила шока — число больше нуля'; return; }
+  if (SHOCKS.some(s => s.channel_id === $('#shock_channel').value && s.parameter === $('#shock_param').value && s.day === day)) { $('#shock-err').textContent = 'такой шок уже добавлен'; return; }
   SHOCKS.push({channel_id: $('#shock_channel').value, parameter: $('#shock_param').value, multiplier: mult, day});
   $('#shock-form').hidden = true; $('#shock-err').textContent = '';
   renderShockChips(); updateRunCaption();
 }
 function shockFromForm() { return SHOCKS.map(s => ({channel_id: s.channel_id, parameter: s.parameter, multiplier: s.multiplier, start_hour: (s.day - 1) * 24})); }
 function updateRunCaption() {
-  const sc = META.scenarios[FORM.scenario], n = SHOCKS.length;
-  $('#run-caption').innerHTML = `на рынке: ${esc(ruTitle(sc ? sc.title : FORM.scenario))}${n ? ` + ${n} ${pw(n, ['свой шок','своих шока','своих шоков'])}` : ''}<span class="tech"> · ${esc(STRATEGY_RU[$('#strategy').value] || $('#strategy').value)} · мир ${esc($('#world_seed').value)}</span>`;
+  const sc = META.scenarios[FORM.scenario], n = SHOCKS.length, nDays = PLAN ? PLAN.brief.horizon_days : null;
+  const na = sc && nDays && sc.events.length && sc.events.every(e => e.start_hour >= nDays * 24);
+  $('#run-caption').innerHTML = `на рынке: ${esc(ruTitle(sc ? sc.title : FORM.scenario))}${na ? ' (за горизонтом плана — не случится)' : ''}${n ? ` + ${n} ${pw(n, ['свой шок','своих шока','своих шоков'])}` : ''}<span class="tech"> · ${esc(STRATEGY_RU[$('#strategy').value] || $('#strategy').value)} · мир ${esc($('#world_seed').value)}</span>`;
 }
 
 function applySuggestion(s) {
@@ -495,11 +507,13 @@ function applySuggestion(s) {
 
 async function whatIf() {
   const box = $('#whatif'); box.innerHTML = '<p class="muted">считаем два соседних плана…</p>';
+  const plan = PLAN;
   try {
-    const base = PLAN._req, b0 = PLAN.total_budget_rub, k0 = PLAN.total_kpi;
+    const base = plan._req, b0 = plan.total_budget_rub, k0 = plan.total_kpi;
     const [lo, hi] = await Promise.all([0.9, 1.1].map(f => api('/api/plan', {body: {...base, budget_rub: Math.round(b0 * f)}})));
-    const line = (p, f) => { const dk = p.total_kpi - k0; return `<tr><td>бюджет ${f > 1 ? '+' : '−'}10 %: ${rub(p.total_budget_rub)}</td><td>${kpiN(p.total_kpi, PLAN.kpi_name)}</td><td>${dk >= 0 ? '+' : ''}${fmt(dk)}</td><td>${fmt(Math.abs(p.total_budget_rub - b0) / Math.max(Math.abs(dk), 1))} ₽</td><td>${fmt(p.total_budget_rub / p.total_kpi)} ₽</td></tr>`; };
-    box.innerHTML = `<table><thead><tr><th>Вариант</th><th>Прогноз</th><th>Δ</th><th>${h2('Цена каждой добавленной', 'или потерянной единицы')}</th><th>${h2('Средняя', 'цена')}</th></tr></thead><tbody>${line(lo, 0.9)}${line(hi, 1.1)}</tbody></table><p class="muted">Отдача вогнутая: последние 10 % бюджета приносят меньше, чем первые. Это цифра для разговора о бюджете.</p>`;
+    if (PLAN !== plan) return;
+    const line = (p, f) => { const dk = p.total_kpi - k0; return `<tr><td>бюджет ${f > 1 ? '+' : '−'}10 %: ${rub(p.total_budget_rub)}</td><td>${kpiN(p.total_kpi, PLAN.kpi_name)}</td><td>${dk >= 0 ? '+' : ''}${fmt(dk)}</td><td>${fmt(Math.abs(p.total_budget_rub - b0) / Math.max(Math.abs(dk), 1))} ₽</td><td>${fmt(p.total_budget_rub / p.total_kpi)} ₽</td></tr>`; };
+    box.innerHTML = `<table><thead><tr><th>Вариант</th><th>Прогноз</th><th>Δ</th><th>${h2('Цена единицы', 'прироста / потери, ₽')}</th><th>${h2('Средняя', 'цена')}</th></tr></thead><tbody>${line(lo, 0.9)}${line(hi, 1.1)}</tbody></table><p class="muted">Последние 10 % бюджета приносят меньше, чем первые — с этой цифрой можно обсуждать бюджет.</p>`;
     fixHeaders(box);
   } catch (e) { box.innerHTML = `<p class="err">Не посчитали: ${esc(ru(e.message))}</p>`; }
 }
@@ -511,6 +525,7 @@ async function approvePlan() {
     if (PLAN !== plan) return;
     PLAN.approved_version = r.approved_version;
     $('#plan-approved').innerHTML = `<span class="badge">утверждён, версия ${r.approved_version}</span>`;
+    $('#btn-approve').hidden = true;
     stage('plan', `утверждён · ${kpiN(PLAN.forecast.p50, PLAN.kpi_name)}`, 'done');
     showRunSection(PLAN);
     $('#run').scrollIntoView({behavior:'smooth'});
@@ -520,12 +535,14 @@ async function approvePlan() {
 async function stressTest() {
   const box = $('#stress'); box.innerHTML = '<p class="muted">прогоняем план через семь шоков и спокойный рынок, около 40 секунд…</p>';
   $('#btn-stress').disabled = true;
+  const plan = PLAN;
   try {
-    const r = await api('/api/stress', {body: {plan_id: PLAN.plan_id, world_seed: +$('#world_seed').value, hold_plan: $('#hold_plan').value === 'true', auto_apply_above_limit: false}});
+    const r = await api('/api/stress', {body: {plan_id: plan.plan_id, world_seed: +$('#world_seed').value, hold_plan: $('#hold_plan').value === 'true', auto_apply_above_limit: false}});
+    if (PLAN !== plan) return;
     const shocks = r.rows.filter(x => x.is_shock), calm = r.rows.find(x => !x.is_shock);
     const ok = shocks.filter(x => x.withstands).length;
-    box.innerHTML = `<div class="verdict ${ok === shocks.length ? 'ok' : 'note'}"><b>План выдерживает ${ok} из ${shocks.length} шоков</b> при пороге кейса ${pct(r.threshold,0)} на отклонение в конце${calm ? `; спокойный рынок: ${calm.withstands ? 'в пороге' : 'вне порога'}` : ''}. Один мир (зерно ${r.world_seed}), наше ведение против плана без изменений. На двадцати мирах — кнопка «Сравнить стратегии» ниже.</div>
-      <div class="scroll"><table><thead><tr><th>Что случилось</th><th>Вердикт</th><th>${h2('Наше ведение:', 'откл. KPI / расхода')}</th><th>${h2('Без изменений:', 'откл. KPI / расхода')}</th><th>${h2('KPI:', 'наше / без изменений')}</th><th>Детектор</th><th>Ходов</th></tr></thead><tbody>
+    box.innerHTML = `<div class="verdict ${ok === shocks.length ? 'ok' : 'note'}"><b>План выдерживает ${ok} из ${shocks.length} шоков</b> при пороге кейса ${pct(r.threshold,0)} на отклонение в конце${calm ? `; спокойный рынок: ${calm.withstands ? 'в пороге' : 'вне порога'}` : ''}. Один мир (зерно ${r.world_seed}), наше ведение против плана без изменений. На 20 мирах — «Сравнить стратегии на 20 мирах» в «Дополнительно» ниже.</div>
+      <div class="scroll"><table><thead><tr><th>Что случилось</th><th>Вердикт</th><th>${h2('Наше ведение:', 'откл. KPI / расхода')}</th><th>${h2('План без изменений:', 'откл. KPI / расхода')}</th><th>${h2('KPI:', 'наше / без изменений')}</th><th>Детектор</th><th>Ходов</th></tr></thead><tbody>
       ${r.rows.map(x => `<tr class="${x.is_shock ? '' : 'dim'}"><td>${esc(x.title)}</td><td><span class="badge ${x.withstands?'':'bad'}">${x.withstands?'выдерживает':'уязвим'}</span></td><td>${pct(x.adaptive_dev_kpi)} / ${pct(x.adaptive_dev_spend)}</td><td>${pct(x.frozen_dev_kpi)} / ${pct(x.frozen_dev_spend)}</td><td>${fmt(x.adaptive_kpi)} / ${fmt(x.frozen_kpi)}</td><td>${Object.entries(x.detection_hours).map(([c,h])=>esc(nm(c))+' · '+hourLabel(h)).join(', ')||'—'}</td><td>${x.moves}</td></tr>`).join('')}</tbody></table></div>`;
     fixHeaders(box);
   } catch (e) { box.innerHTML = `<p class="err">Стресс-тест не прошёл: ${esc(ru(e.message))}</p>`; }
@@ -534,7 +551,7 @@ async function stressTest() {
 
 async function runCampaign() {
   $('#btn-run').disabled = true; stopPlayer();
-  $('#run-body').innerHTML = '<p class="muted">гоним кампанию по часам, две-три секунды…</p>';
+  $('#run-body').innerHTML = '<p class="muted">считаем кампанию по часам, две-три секунды…</p>';
   try {
     const plan = PLAN, req = {plan_id: plan.plan_id, strategy: $('#strategy').value, scenario_id: FORM.scenario, world_seed: +$('#world_seed').value, shocks: shockFromForm(), hold_plan: $('#hold_plan').value === 'true', auto_apply_above_limit: false};
     const res = await api('/api/run', {body: req});
@@ -565,7 +582,7 @@ function prepareRun(r) {
         <button class="small" id="p-play">▶ Смотреть по часам</button>
         <button class="small secondary" id="p-next">До следующего события</button>
         <button class="small secondary" id="p-end">К итогу</button>
-        <label class="inline">скорость <select id="p-speed" style="min-width:80px"><option value="1">час</option><option value="6" selected>6 часов</option><option value="24">сутки</option></select> за тик</label>
+        <label class="inline">шаг <select id="p-speed" style="min-width:80px"><option value="1">час</option><option value="6" selected>6 часов</option><option value="24">сутки</option></select></label>
       </div>
       <div class="p-row">
         <input type="range" id="p-slider" min="1" max="${N}" value="1">
@@ -580,7 +597,7 @@ function prepareRun(r) {
     <div class="charts"><div class="chart"><canvas id="c-run-kpi"></canvas></div><div class="chart"><canvas id="c-run-spend"></canvas></div></div>
     <div class="two" style="margin-top:14px">
       <div class="tech"><h3>Каналы в этот час</h3><div class="scroll"><table id="hour-table"></table></div></div>
-      <div><h3>Лента: шоки, детектор, ходы</h3><div class="feed" id="feed"></div><h3>Предложения и ходы автоматики</h3><div id="cards"></div></div>
+      <div><h3>Что происходило</h3><div class="feed" id="feed"></div><h3>Переносы бюджета</h3><div id="cards"></div></div>
     </div>
     <div class="chart" style="margin-top:14px;height:220px"><canvas id="c-run-stack"></canvas></div>
     <div id="run-verdict" class="tech"></div>`;
@@ -590,22 +607,23 @@ function prepareRun(r) {
   lineChart('c-run-kpi', hours, [
     {label: 'план', data: m.hours.map(h => h.plan_cum_kpi), borderColor: '#24486B', borderDash: [6,4]},
     {label: 'факт · ' + stratTitle, data: [], borderColor: '#1F8A70', borderWidth: 2.5},
-    ...(r.isStatic ? [] : [{label: 'факт · план без изменений', data: [], borderColor: '#A9701A'}]),
-  ], 'Накопительно, ' + K.many + ': план, факт, план без изменений', [shockMark]);
+    ...(r.isStatic ? [] : [{label: 'план без изменений', data: [], borderColor: '#A9701A'}]),
+  ], cap(K.nomPl) + ' накопительно: план, факт, план без изменений', [shockMark]);
   lineChart('c-run-spend', hours, [
     {label: 'план', data: m.hours.map(h => h.plan_cum_spend), borderColor: '#24486B', borderDash: [6,4]},
     {label: 'факт · ' + stratTitle, data: [], borderColor: '#1F8A70', borderWidth: 2.5},
-    ...(r.isStatic ? [] : [{label: 'факт · план без изменений', data: [], borderColor: '#A9701A'}]),
-  ], 'Накопительный расход, ₽', [shockMark]);
+    ...(r.isStatic ? [] : [{label: 'план без изменений', data: [], borderColor: '#A9701A'}]),
+  ], 'Накопительный расход, ₽', [shockMark]);
   const palette = ['#24486B','#4A7BA6','#7FA9D8','#A9701A','#D7A44E','#2C6552','#69B79A','#9C3A2B'];
   destroy('c-run-stack');
-  CHARTS['c-run-stack'] = new Chart($('#c-run-stack'), {type:'bar', data:{labels: [], datasets: channels.map((c, i) => ({label: nm(c), data: [], backgroundColor: palette[i%palette.length]}))}, options:{responsive:true, maintainAspectRatio:false, animation:false, plugins:{title:{display:true,text:'Куда уходили деньги: доля расхода по каналам по дням, %'}, legend:{position:'bottom', labels:{boxWidth:10, font:{size:10}}}}, scales:{x:{stacked:true}, y:{stacked:true, max:100}}}});
+  CHARTS['c-run-stack'] = new Chart($('#c-run-stack'), {type:'bar', data:{labels: [], datasets: channels.map((c, i) => ({label: nm(c), data: [], backgroundColor: palette[i%palette.length]}))}, options:{responsive:true, maintainAspectRatio:false, animation:false, plugins:{title:{display:true,text:'Куда уходили деньги: доля каналов в расходе по дням, %'}, legend:{position:'bottom', labels:{boxWidth:10, font:{size:10}}}}, scales:{x:{stacked:true}, y:{stacked:true, max:100}}}});
   $('#p-play').onclick = togglePlay; $('#p-next').onclick = nextEvent; $('#p-end').onclick = () => { stopPlayer(); showHour(N); };
   $('#p-slider').oninput = (e) => { stopPlayer(); showHour(+e.target.value); };
   $('#p-speed').onchange = (e) => PLAYER.speed = +e.target.value;
   PLAYER.speed = 6;
   showHour(1);
   $('#summary').hidden = true;
+  stage('summary', 'в конце кампании', 'off');
 }
 
 function cardText(p, r, H) {
@@ -613,11 +631,11 @@ function cardText(p, r, H) {
   const title = `${hourLabel(p.hour)} · перенести ${rub(p.amount_rub)} из «${esc(nm(p.from_channel))}» в «${esc(nm(p.to_channel))}»`;
   const why = esc(ru(p.cause));
   const ifDo = p.cpa_delta_pct != null ? `${K.price} на остатке ${p.cpa_delta_pct >= 0 ? 'вырастет' : 'снизится'} на ${pct(Math.abs(p.cpa_delta_pct)/100)}` : esc(ru(p.cost_of_decision));
-  const ifNot = p.inaction_kpi_shortfall_pct != null && p.inaction_kpi_shortfall_pct > 0 ? `недоберём ≈ ${pct(p.inaction_kpi_shortfall_pct/100, 0)} ${K.many} к концу` : 'план выполняется; ход экономит бюджет';
+  const ifNot = p.inaction_kpi_shortfall_pct != null && p.inaction_kpi_shortfall_pct > 0 ? `недоберём ≈ ${pct(p.inaction_kpi_shortfall_pct/100, 0)} ${K.many} к концу` : 'план выполняется; перенос экономит бюджет';
   let who, cls = '';
-  if (p.applied_by === 'system') who = 'сделано автоматически' + (limit != null ? `: ${rub(p.amount_rub)} в пределах вашего лимита ${rub(limit)}` : '');
+  if (p.applied_by === 'system') who = 'сделано автоматически' + (limit != null ? `: ${rub(p.amount_rub)} ниже лимита ${rub(limit)}` : '');
   else if (p.applied_by === 'human') who = 'сделано по вашему решению';
-  else if (d === 'decline') who = `вы оставили как есть: деньги остались в «${esc(nm(p.from_channel))}»`;
+  else if (d === 'decline') who = `по вашему решению деньги остались в «${esc(nm(p.from_channel))}»`;
   else { who = `ждёт вашего решения: ${rub(p.amount_rub)} выше лимита ${rub(limit)}`; cls = 'pending'; }
   const btns = (p.applied_by === 'pending' && !d) ? `<div class="row" style="margin-top:6px"><button class="small" data-h="${p.hour}" data-d="approve">Перенести</button><button class="small secondary" data-h="${p.hour}" data-d="decline">Оставить как есть</button></div>` : '';
   return `<div class="card ${cls}"><b>${title}</b><br>Почему: ${why}<br>Если сделать: ${ifDo}<br>Если не делать: ${ifNot}<span class="who">${who}</span>${btns}</div>`;
@@ -633,20 +651,22 @@ function showHour(H) {
   const errS = rec.plan_cum_spend ? 1 - rec.fact_cum_spend / rec.plan_cum_spend : 0, errK = rec.plan_cum_kpi ? 1 - rec.fact_cum_kpi / rec.plan_cum_kpi : 0, zk = z.hours[H-1].fact_cum_kpi, dz = rec.fact_cum_kpi - zk;
   const tiles = [
     ['Расход накопительно', rub(rec.fact_cum_spend), 'план к этому часу ' + rub(rec.plan_cum_spend) + ' (' + (errS>0?'−':'+') + pct(Math.abs(errS)) + ')', 'fact'],
-    [cap(K.many) + ' накопительно', fmt(rec.fact_cum_kpi), 'план к этому часу ' + fmt(rec.plan_cum_kpi) + ' (' + (errK>0?'−':'+') + pct(Math.abs(errK)) + ')', 'fact'],
-    r.isStatic ? ['Стратегия', 'план буквально', 'это и есть план без изменений', ''] : ['Без перераспределения было бы', fmt(zk), `тот же мир, план буквально (${dz >= 0 ? '+' : ''}${fmt(dz)})`, ''],
-    rec.reserve > 0 ? ['Резерв бюджета', rub(rec.reserve), 'план выполняется, лишнее не тратим', 'ok'] : ['Допуск коридора', '±' + pct(PLAN.corridor_rel, 0), 'за коридором — «наблюдаем», после детектора — «пожар»', ''],
+    [cap(K.nomPl) + ' накопительно', fmt(rec.fact_cum_kpi), 'план к этому часу ' + fmt(rec.plan_cum_kpi) + ' (' + (errK>0?'−':'+') + pct(Math.abs(errK)) + ')', 'fact'],
+    r.isStatic ? ['Ведение', 'план без изменений', 'переносов не было', ''] : ['План без изменений дал бы', fmt(zk), `тот же рынок, без переносов (${dz >= 0 ? '+' : ''}${fmt(dz)})`, ''],
+    rec.reserve > 0 ? ['Резерв бюджета', rub(rec.reserve), 'план выполняется, лишнее не тратим', 'ok'] : ['Допуск коридора', '±' + pct(PLAN.corridor_rel, 0), 'за коридором — «наблюдаем», при сломе канала — «пожар»', ''],
   ];
   $('#hour-tiles').innerHTML = tiles.map(t=>`<div class="tile ${t[3]}"><span>${t[0]}</span><b>${t[1]}</b><span>${t[2]}</span></div>`).join('');
   for (const [id, key] of [['c-run-kpi','fact_cum_kpi'],['c-run-spend','fact_cum_spend']]) {
     const ch = CHARTS[id]; if (!ch) continue; ch.data.datasets[1].data = m.hours.map((h,i) => i < H ? h[key] : null); if (ch.data.datasets[2]) ch.data.datasets[2].data = z.hours.map((h,i) => i < H ? h[key] : null); ch.update('none');
   }
   const channels = Object.keys(rec.by_channel), hod = ((H-1) % 24) + 1;
-  $('#hour-table').innerHTML = `<thead><tr><th>Канал</th><th>${h2('Лимит', 'на час, ₽')}</th><th>Запросы</th><th>Показы</th><th>Охват</th><th>Клики</th><th>Конверсии</th><th>Расход, ₽</th><th>eCPM</th><th>${h2('Расход', 'накопит.')}</th><th>${h2(cap(K.many), 'накопит.')}</th></tr></thead><tbody>` +
+  $('#hour-table').innerHTML = `<thead><tr><th>Канал</th><th>${h2('Лимит', 'на час, ₽')}</th><th>Запросы</th><th>Показы</th><th>Охват</th><th>Клики</th><th>Конверсии</th><th>Расход, ₽</th><th>eCPM</th><th>${h2('Расход', 'накопит.')}</th><th>${h2(cap(K.nomPl), 'накопит.')}</th></tr></thead><tbody>` +
     channels.map(c => { const s = rec.by_channel[c]; const meta = META.catalog.channels.find(x => x.channel_id === c); const win = meta && meta.sms ? meta.sms.send_hours : null; const outside = win && (hod <= win[0] || hod > win[1]); const dim = outside || (s.impressions === 0 && rec.caps[c] > 0); const note = outside ? ` · вне окна ${win[0]}–${win[1]}` : (dim ? ' · нет показов' : ''); return `<tr class="${dim?'dim':''}"><td>${esc(nm(c))}${note}</td><td>${fmt(rec.caps[c])}</td><td>${fmt(s.requests)}</td><td>${fmt(s.impressions)}</td><td>${fmt(s.unique_reach)}</td><td>${fmt(s.clicks)}</td><td>${fmt(s.conversions)}</td><td>${fmt(s.spend)}</td><td>${fmt(s.ecpm)}</td><td>${fmt(r.cum[c].spend[H-1])}</td><td>${fmt(r.cum[c].kpi[H-1])}</td></tr>`; }).join('') + '</tbody>';
-  $('#feed').innerHTML = feedLines(r, H).slice(0, 14).map(l => `<div><span class="t">${l.t}</span>${l.text}</div>`).join('') || '<div class="muted">пока тихо: ни шоков, ни ходов, детектор молчит</div>';
-  const cards = m.proposals.filter(p => p.hour <= H);
-  $('#cards').innerHTML = cards.length ? cards.slice(-4).reverse().map(p => cardText(p, r, H)).join('') : '<p class="muted">переносов пока не было</p>';
+  $('#feed').innerHTML = feedLines(r, H).slice(0, 14).map(l => `<div><span class="t">${l.t}</span>${l.text}</div>`).join('') || '<div class="muted">пока тихо: ни событий, ни переносов</div>';
+  // ждущие решения карточки показываем всегда и первыми, потом последние четыре переноса
+  const cards = m.proposals.filter(p => p.hour <= H), pendingCards = cards.filter(p => p.applied_by === 'pending' && !(r.decisions||{})[p.hour]);
+  const shown = [...pendingCards, ...cards.slice(-4).filter(p => !pendingCards.includes(p)).reverse()];
+  $('#cards').innerHTML = shown.length ? shown.map(p => cardText(p, r, H)).join('') : '<p class="muted">переносов пока не было</p>';
   $('#cards').querySelectorAll('button[data-h]').forEach(b => b.onclick = () => decideProposal(+b.dataset.h, b.dataset.d));
   $('#digest').innerHTML = digest(r, H);
   const daysDone = Math.ceil(H/24);
@@ -662,7 +682,7 @@ function feedLines(r, H) {
   for (const sh of r.scenarioHours) if (sh <= H) lines.push({h: sh, t: hourStartLabel(sh - 1), text: 'шок рынка: ' + esc(ruTitle(META.scenarios[m.scenario_id]?.title || ''))});
   for (const sk of (r.custom_shocks||[])) { const sh = sk.start_hour + 1; if (sh <= H && sh <= m.hours.length) lines.push({h: sh, t: hourStartLabel(sk.start_hour), text: `свой шок: ${esc(SHOCK_PARAM_RU[sk.parameter] || sk.parameter)} ×${String(sk.multiplier).replace('.', ',')} в «${esc(nm(sk.channel_id))}»`}); }
   for (const h of m.hours.slice(0, H)) for (const e of h.events) lines.push({h: h.hour, t: hourLabel(h.hour), text: esc(ru(e.replace(/^час \d+:\s*/, '')))});
-  for (const p of m.proposals) if (p.hour <= H) { const d = (r.decisions||{})[p.hour]; const verb = p.applied_by === 'system' ? 'автоматика перенесла' : p.applied_by === 'human' ? 'вы перенесли' : d === 'decline' ? 'вы оставили как есть, предлагалось перенести' : 'ждёт решения: перенести'; lines.push({h: p.hour, t: hourLabel(p.hour), text: `${verb} ${rub(p.amount_rub)} из «${esc(nm(p.from_channel))}» в «${esc(nm(p.to_channel))}»`}); }
+  for (const p of m.proposals) if (p.hour <= H) { const d = (r.decisions||{})[p.hour]; const verb = p.applied_by === 'system' ? 'автоматика перенесла' : p.applied_by === 'human' ? 'вы перенесли' : d === 'decline' ? 'вы отклонили перенос' : 'ждёт решения: перенести'; lines.push({h: p.hour, t: hourLabel(p.hour), text: `${verb} ${rub(p.amount_rub)} из «${esc(nm(p.from_channel))}» в «${esc(nm(p.to_channel))}»`}); }
   return lines.sort((a, b) => b.h - a.h);
 }
 
@@ -687,14 +707,15 @@ function digest(r, H) {
   const pending = m.proposals.filter(p => p.hour <= H && p.applied_by === 'pending' && !(r.decisions||{})[p.hour]);
   const fresh = pending.filter(p => H - p.hour <= 24), stale = pending.filter(p => H - p.hour > 24);
   const last = m.proposals.filter(p => p.hour <= H).slice(-1)[0];
-  const advice = rec.status === 'fire' ? 'детектор увидел слом канала, автоматика заново делит остаток бюджета; смотрите карточку'
-    : rec.status === 'watch' ? 'вышли за коридор, но слома нет: следующий пересчёт не позже чем через 6 часов, ничего не делать'
+  const advice = H === N ? 'кампания завершена, итог ниже'
+    : rec.status === 'fire' ? 'канал сломался, автоматика заново делит остаток бюджета — смотрите карточку'
+    : rec.status === 'watch' ? 'вышли за коридор, но канал цел: пересчёт не позже чем через 6 часов, делать ничего не нужно'
     : fresh.length ? `нужно ваше решение по карточке (${hourLabel(fresh[fresh.length-1].hour)}): сумма выше лимита автоматики`
     : 'кампания идёт по плану, ничего делать не нужно';
   return `<b>Сводка: ${hourLabel(H)}.</b> Прошло ${pct(timeShare,0)} времени, потрачено ${pct(spendShare,0)} бюджета, получено ${pct(kpiShare,0)} ${K.promised}. `
-    + (detected.length ? `Детектор: ${detected.map(([c,h])=>esc(nm(c))+' ('+hourLabel(h)+')').join(', ')}. ` : '')
-    + (last ? `Последний ход: ${hourLabel(last.hour)}, ${rub(last.amount_rub)} из «${esc(nm(last.from_channel))}» в «${esc(nm(last.to_channel))}». ` : '')
-    + (stale.length ? `Не решено вовремя: ${stale.length} ${pw(stale.length, ['карточка','карточки','карточек'])}, деньги остались у донора. ` : '')
+    + (detected.length ? `Слом канала: ${detected.map(([c,h])=>esc(nm(c))+' ('+hourLabel(h)+')').join(', ')}. ` : '')
+    + (last ? `Последний перенос: ${hourLabel(last.hour)}, ${rub(last.amount_rub)} из «${esc(nm(last.from_channel))}» в «${esc(nm(last.to_channel))}». ` : '')
+    + (stale.length ? `Не решено вовремя: ${stale.length} ${pw(stale.length, ['карточка','карточки','карточек'])}, деньги остались в прежнем канале. ` : '')
     + (rec.reserve > 0 ? `В резерве ${rub(rec.reserve)}. ` : '')
     + `<b>Что делать:</b> ${advice}.`;
 }
@@ -709,24 +730,28 @@ async function decideProposal(hour, decision) {
     const eff = res.effect; RUN = res; RUN._req = run._req; prepareRun(RUN); showHour(H);
     const K = KPI[RUN.verdict.kpi_name];
     $('#decision-banner').innerHTML = decision === 'decline'
-      ? `<div class="verdict note"><b>Ход ${hourLabel(hour)} оставлен как есть.</b> Деньги остались в канале-доноре; автоматика продолжает в пределах лимита.</div>`
-      : `<div class="verdict ${eff.kpi_delta >= 0 ? 'ok' : ''}"><b>Ход ${hourLabel(hour)} сделан. Цена решения по факту:</b> ${eff.kpi_delta >= 0 ? '+' : ''}${fmt(eff.kpi_delta)} ${plural(eff.kpi_delta, RUN.verdict.kpi_name)} и ${eff.spend_delta >= 0 ? '+' : ''}${rub(eff.spend_delta)} к итогу кампании; отклонение по ${K.dat} ${pct(eff.deviation_kpi_before)} → ${pct(eff.deviation_kpi_after)}. Тот же мир, те же случайные числа: разница только из-за вашего решения.</div>`;
+      ? `<div class="verdict note"><b>Перенос (${hourLabel(hour)}) отклонён.</b> Деньги остались в прежнем канале; автоматика продолжает в пределах лимита.</div>`
+      : `<div class="verdict ${eff.kpi_delta >= 0 ? 'ok' : ''}"><b>Перенос (${hourLabel(hour)}) сделан. Что изменилось:</b> ${eff.kpi_delta >= 0 ? '+' : ''}${fmt(eff.kpi_delta)} ${plural(eff.kpi_delta, RUN.verdict.kpi_name)} и ${eff.spend_delta >= 0 ? '+' : ''}${rub(eff.spend_delta)} к итогу кампании; отклонение по ${K.dat} ${pct(eff.deviation_kpi_before)} → ${pct(eff.deviation_kpi_after)}. Тот же рынок и та же случайность — разница только от вашего решения.</div>`;
   } catch (e) { $('#decision-banner').innerHTML = `<p class="err">Не пересчитали: ${esc(ru(e.message))}</p>` + (String(e.message).includes('не найден') ? '<button class="small" onclick="runCampaign()">Запустить заново</button>' : ''); }
 }
 
 async function degradationTest() {
   $('#btn-degrade').disabled = true;
+  const plan = PLAN;
   const param = $('#shock_param').value || 'ctr', channel = $('#shock_channel').value || (PLAN.allocations[0] && PLAN.allocations[0].channel_id);
+  if (param === 'pause') { $('#btn-degrade').disabled = false; $('#run-body').prepend(Object.assign(document.createElement('p'), {className: 'err tech', textContent: 'паузу канала не усилить: выберите в форме своего шока цену, CTR, CR, инвентарь или спрос'})); return; }
   const mults = param === 'ecpm' ? [1, 1.5, 2, 3, 4] : [1, 0.8, 0.6, 0.4, 0.2];
   const startHour = (Math.min(+$('#shock_day').value || 1, PLAN.brief.horizon_days) - 1) * 24;
   const box = document.createElement('div'); box.className = 'tech'; box.innerHTML = '<p class="muted">усиливаем шок шаг за шагом, около 20 секунд…</p>'; $('#run-body').prepend(box);
   try {
     const d = await api('/api/degradation', {body: {plan_id: PLAN.plan_id, world_seed: +$('#world_seed').value, channel_id: channel, parameter: param, start_hour: startHour, multipliers: mults, hold_plan: $('#hold_plan').value === 'true', auto_apply_above_limit: false}});
+    if (PLAN !== plan) { box.remove(); return; }
+    if (!box.isConnected) $('#run-body').prepend(box);
     const breakAt = d.rows.find(x => !x.withstands);
-    box.innerHTML = `<h3>Где ломается решение: ${esc(SHOCK_PARAM_RU[param] || param)} в «${esc(nm(channel))}» с ${hourStartLabel(startHour)}, мир ${esc($('#world_seed').value)}</h3>
+    box.innerHTML = `<h3>Где ломается решение: ${esc(SHOCK_PARAM_RU[param] || param)} в «${esc(nm(channel))}» со дня ${Math.floor(startHour / 24) + 1}, мир ${esc($('#world_seed').value)}</h3>
       <div class="two"><div class="chart"><canvas id="c-degrade"></canvas></div>
-      <div><table><thead><tr><th>Сила</th><th>${h2('Наше ведение:', 'откл. KPI / расхода')}</th><th>${h2('Без изменений:', 'откл. KPI / расхода')}</th><th>Детектор</th><th>Порог 20 %</th></tr></thead><tbody>${d.rows.map(x => `<tr><td>×${x.multiplier}</td><td>${pct(x.adaptive_dev_kpi)} / ${pct(x.adaptive_dev_spend)}</td><td>${pct(x.frozen_dev_kpi)} / ${pct(x.frozen_dev_spend)}</td><td>${x.detection_hour ? hourLabel(x.detection_hour) : '—'}</td><td>${x.withstands ? 'выдерживает' : 'не выдерживает'}</td></tr>`).join('')}</tbody></table>
-      <p class="muted">${breakAt ? `Решение перестаёт укладываться в порог кейса при силе ×${breakAt.multiplier}: это граница применимости, названная явно.` : 'На этом диапазоне решение укладывается в порог кейса при любой силе шока.'}</p></div></div>`;
+      <div><table><thead><tr><th>Сила</th><th>${h2('Наше ведение:', 'откл. KPI / расхода')}</th><th>${h2('План без изменений:', 'откл. KPI / расхода')}</th><th>Детектор</th><th>Порог 20 %</th></tr></thead><tbody>${d.rows.map(x => `<tr><td>×${String(x.multiplier).replace('.', ',')}</td><td>${pct(x.adaptive_dev_kpi)} / ${pct(x.adaptive_dev_spend)}</td><td>${pct(x.frozen_dev_kpi)} / ${pct(x.frozen_dev_spend)}</td><td>${x.detection_hour ? hourLabel(x.detection_hour) : '—'}</td><td>${x.withstands ? 'выдерживает' : 'не выдерживает'}</td></tr>`).join('')}</tbody></table>
+      <p class="muted">${breakAt ? `Решение перестаёт укладываться в порог кейса при силе ×${breakAt.multiplier}: дальше решение порог не держит.` : 'На этом диапазоне решение укладывается в порог кейса при любой силе шока.'}</p></div></div>`;
     lineChart('c-degrade', d.rows.map(x => '×' + x.multiplier), [
       {label: 'наше ведение: отклонение KPI', data: d.rows.map(x => x.adaptive_dev_kpi * 100), borderColor: '#1F8A70', borderWidth: 2.5},
       {label: 'без изменений: отклонение KPI', data: d.rows.map(x => x.frozen_dev_kpi * 100), borderColor: '#A9701A'},
@@ -740,7 +765,7 @@ async function degradationTest() {
 function renderVerdict(r) {
   const v = r.verdict, m = r.main, K = KPI[v.kpi_name], s = r.seeds || {};
   const better = v.final_deviation_kpi <= v.frozen_final_deviation_kpi;
-  $('#run-verdict').innerHTML = `<div class="verdict ${v.within_threshold ? 'ok' : ''}"><b>Вердикт по кампании.</b> ${esc(STRATEGY_RU[m.strategy] || m.strategy)}: отклонение в конце по расходу ${pct(v.final_deviation_spend)}, по ${K.dat} ${pct(v.final_deviation_kpi)} — порог кейса ${pct(v.threshold,0)} ${v.within_threshold?'выполнен':'не выполнен'}.${r.isStatic ? '' : ` План без изменений на том же мире: ${pct(v.frozen_final_deviation_spend)} / ${pct(v.frozen_final_deviation_kpi)} (${v.frozen_within_threshold ? 'в пороге' : 'вне порога'}). ${better ? 'Мы ближе к плану по ' + K.dat + '.' : 'В этом мире план без изменений оказался ближе по ' + K.dat + '.'}`} MAPE по часам: расход ${pct(v.mape_spend)}, ${K.nomPl} ${pct(v.mape_kpi)}. Детектор: ${Object.entries(v.detection_hours).map(([c,h])=>esc(nm(c))+' · '+hourLabel(h)).join(', ')||'не срабатывал'}. <span class="muted">Зёрна: каталог ${s.catalog_seed ?? 0} · мир ${s.world_seed} · шум ${s.noise_seed} · сценарий ${esc(r.scenario_id)} — повтор даёт тот же результат.</span></div>`;
+  $('#run-verdict').innerHTML = `<div class="verdict ${v.within_threshold ? 'ok' : ''}"><b>Вердикт по кампании.</b> ${esc(cap(STRATEGY_RU[m.strategy] || m.strategy))}: отклонение в конце по расходу ${pct(v.final_deviation_spend)}, по ${K.dat} ${pct(v.final_deviation_kpi)} — порог кейса ${pct(v.threshold,0)} ${v.within_threshold?'соблюдён':'превышен'}.${r.isStatic ? '' : ` План без изменений на том же мире: ${pct(v.frozen_final_deviation_spend)} / ${pct(v.frozen_final_deviation_kpi)} (${v.frozen_within_threshold ? 'в пороге' : 'вне порога'}). ${better ? 'Мы ближе к плану по ' + K.dat + '.' : 'В этом мире план без изменений оказался ближе по ' + K.dat + '.'}`} MAPE по часам: расход ${pct(v.mape_spend)}, ${K.nomPl} ${pct(v.mape_kpi)}. Детектор: ${Object.entries(v.detection_hours).map(([c,h])=>esc(nm(c))+' · '+hourLabel(h)).join(', ')||'не срабатывал'}. <span class="muted">Зёрна: каталог ${s.catalog_seed ?? 0} · мир ${s.world_seed} · шум ${s.noise_seed} · сценарий ${esc(r.scenario_id)} — повтор даёт тот же результат.</span></div>`;
 }
 
 function renderSummary(r) {
@@ -749,62 +774,65 @@ function renderSummary(r) {
   const N = m.hours.length;
   const perChannel = PLAN.allocations.map(a => { const c = a.channel_id; const spend = r.cum[c] ? r.cum[c].spend[N-1] : 0; const got = r.cum[c] ? r.cum[c].kpi[N-1] : 0; const promised = allocKpi(a, v.kpi_name); return `<tr><td>${esc(a.display_name)}</td><td>${fmt(a.budget_rub)}</td><td>${fmt(spend)}</td><td>${a.budget_rub ? pct((spend-a.budget_rub)/a.budget_rub) : '—'}</td><td>${fmt(promised)}</td><td>${fmt(got)}</td><td>${promised?pct((got-promised)/promised):'—'}</td></tr>`; }).join('');
   const returned = v.returned_budget_rub, kpiDone = v.actual_kpi >= v.promised_kpi * (1 - PLAN.corridor_rel);
-  const returnedNote = returned <= 1000 ? 'бюджет потрачен целиком' : kpiDone ? 'план выполнен, лишнее не тратили' : `недобор по ${K.many} ${pct(v.final_deviation_kpi)}, неизрасходованное вернули`;
+  const returnedNote = returned <= 1000 ? 'бюджет потрачен целиком' : kpiDone ? 'план выполнен, лишнее не тратили' : `недобор по ${K.dat} ${pct(v.final_deviation_kpi)}, неизрасходованное вернули`;
   // обещание клиенту: «по прогнозу» — это прогноз с разбросом, выполнено, если факт не ниже нижней границы;
   // «с запасом» — твёрдая нижняя граница, факт сравниваем с ней
   const pr = PLAN._promise || {mode: 'median', value: v.promised_kpi}, cautious = pr.mode === 'cautious';
   const floor = cautious ? pr.value : pr.value * (1 - PLAN.corridor_rel), kept = v.actual_kpi >= floor, dev = v.actual_kpi / pr.value - 1;
-  const keptNote = cautious ? `${fmt(v.actual_kpi)} при обещанных с запасом ${fmt(pr.value)}` : `${fmt(v.actual_kpi)} при прогнозе ${fmt(pr.value)}: ${dev >= 0 ? '+' : '−'}${pct(Math.abs(dev),1)} ${kept ? 'внутри' : 'за пределами'} разброса ±${pct(PLAN.corridor_rel,0)}`;
+  const keptNote = cautious ? `${fmt(v.actual_kpi)} при обещанных с запасом ${fmt(pr.value)}` : `${fmt(v.actual_kpi)} при прогнозе ${fmt(pr.value)}: ${dev >= 0 ? '+' : '−'}${pct(Math.abs(dev),1)}, ${kept ? 'внутри' : 'за пределами'} разброса ±${pct(PLAN.corridor_rel,0)}`;
   const chrono = feedLines(r, N + 1).reverse();
   stage('summary', `${kept ? 'обещание выполнено' : 'обещание не выполнено'} · ${kpiN(v.actual_kpi, v.kpi_name)}`, 'cur');
   $('#summary-body').innerHTML = `
-    <div class="verdict note"><b>Для рекламодателя.</b> Обещали ${kpiN(pr.value, v.kpi_name, true)} за ${rub(v.promised_spend)}${cautious ? ` (расчётный план ${kpiN(v.promised_kpi, v.kpi_name)}, обещание с запасом)` : ''}. Получили ${kpiN(v.actual_kpi, v.kpi_name, true)} за ${rub(v.actual_spend)}${returned > 1000 ? `, ${rub(returned)} не потрачены и возвращаются` : ''}.${r.isStatic ? '' : ` Если бы план исполнялся без изменений, было бы ${kpiN(v.frozen_kpi, v.kpi_name)} за ${rub(v.frozen_spend)}.`}</div>
+    <div class="verdict note"><b>Коротко.</b> Обещали ${kpiN(pr.value, v.kpi_name, true)} за ${rub(v.promised_spend)}${cautious ? ` (расчётный план ${kpiN(v.promised_kpi, v.kpi_name)}, обещание с запасом)` : ''}. Получили ${kpiN(v.actual_kpi, v.kpi_name, true)} за ${rub(v.actual_spend)}${returned > 1000 ? `, ${rub(returned)} не потрачены — возвращаем` : ''}.${r.isStatic ? '' : ` План без изменений дал бы ${kpiN(v.frozen_kpi, v.kpi_name)} за ${rub(v.frozen_spend)}.`}</div>
     <div class="tiles">
-      <div class="tile ${kept ? 'ok' : 'alert'}"><span>Обещание клиенту</span><b>${kept ? 'выполнено' : 'не выполнено'}</b><span>${keptNote}</span></div>
+      <div class="tile ${kept ? 'ok' : 'alert'}"><span>Обещание</span><b>${kept ? 'выполнено' : 'не выполнено'}</b><span>${keptNote}</span></div>
       <div class="tile tech ${v.within_threshold ? 'ok' : 'alert'}"><span>Порог кейса ${pct(v.threshold,0)}</span><b>${v.within_threshold ? 'в пороге' : 'вне порога'}</b><span>план без изменений: ${v.frozen_within_threshold ? 'в пороге' : 'вне порога'}</span></div>
-      <div class="tile"><span>Отклонение по расходу</span><b>${pct(v.final_deviation_spend)}</b><span>без изменений ${pct(v.frozen_final_deviation_spend)}</span></div>
-      <div class="tile"><span>Отклонение по ${K.dat}</span><b>${pct(v.final_deviation_kpi)}</b><span>без изменений ${pct(v.frozen_final_deviation_kpi)}</span></div>
+      <div class="tile"><span>Отклонение по расходу</span><b>${pct(v.final_deviation_spend)}</b><span>${PLAN._base ? 'от плана с резервом · ' : ''}без изменений ${pct(v.frozen_final_deviation_spend)}</span></div>
+      <div class="tile"><span>Отклонение по ${K.dat}</span><b>${pct(v.final_deviation_kpi)}</b><span>${PLAN._base ? 'от плана с резервом · ' : ''}без изменений ${pct(v.frozen_final_deviation_kpi)}</span></div>
       <div class="tile ${returned>1000 && kpiDone?'ok':''}"><span>Возвращено бюджета</span><b>${rub(returned)}</b><span>${returnedNote}</span></div>
-      <div class="tile"><span>Ходов автоматики</span><b>${m.proposals.length}</b><span>обращений к человеку: ${v.human_requests}</span></div>
+      <div class="tile"><span>Переносов автоматики</span><b>${m.proposals.length}</b><span>ждали вашего решения: ${v.human_requests}</span></div>
     </div>
     <h3>По каналам: обещали и получили</h3>
-    <div class="scroll"><table><thead><tr><th>Канал</th><th>${h2('Бюджет', 'по плану')}</th><th>Потрачено</th><th>Δ</th><th>${h2(cap(K.many), 'по плану')}</th><th>${h2(cap(K.many), 'получено')}</th><th>Δ</th></tr></thead><tbody>${perChannel}</tbody></table></div>
-    <h3>Хронология: шоки, детектор, ходы</h3>
-    <div class="feed">${chrono.map(l=>`<div><span class="t">${l.t}</span>${l.text}</div>`).join('') || '<div class="muted">шоков и ходов не было</div>'}</div>`;
+    <div class="scroll"><table><thead><tr><th>Канал</th><th>${h2('Бюджет', 'по плану')}</th><th>Потрачено</th><th>Δ</th><th>${h2(cap(K.nomPl), 'по плану')}</th><th>Получено</th><th>Δ</th></tr></thead><tbody>${perChannel}</tbody></table></div>
+    <h3>Хронология событий</h3>
+    <div class="feed">${chrono.map(l=>`<div><span class="t">${l.t}</span>${l.text}</div>`).join('') || '<div class="muted">событий и переносов не было</div>'}</div>`;
   fixHeaders($('#summary-body'));
 }
 
 async function compareStrategies() {
   $('#btn-compare').disabled = true;
+  const plan = PLAN;
   const box = document.createElement('div'); box.className = 'tech'; box.innerHTML = '<p class="muted">парные прогоны на 20 мирах, четыре стратегии, около минуты…</p>'; $('#run-body').prepend(box);
   try {
     const cmp = await api('/api/compare', {body: {plan_id: PLAN.plan_id, scenario_id: FORM.scenario, seeds: 20, shocks: shockFromForm(), hold_plan: $('#hold_plan').value === 'true'}});
+    if (PLAN !== plan) { box.remove(); return; }
+    if (!box.isConnected) $('#run-body').prepend(box); // прогон перезапустили, пока шёл стенд
     const st = cmp.strategies, K = KPI[PLAN.kpi_name];
     const rows = Object.values(st).map(s => `<tr><td>${esc(s.title || s.strategy)}</td><td>${pct(s.mean.final_deviation_spend)} ± ${pct(s.ci95.final_deviation_spend)}</td><td>${pct(s.mean.final_deviation_kpi)} ± ${pct(s.ci95.final_deviation_kpi)}</td><td>${s.within_threshold_count} из ${cmp.seeds}</td><td>${pct(s.mean.mape_spend)}</td><td>${pct(s.mean.mape_kpi)}</td><td>${fmt(s.mean_actual_kpi)}</td><td>${fmt(s.mean_actual_spend)}</td><td>${s.win_rate_vs_static.final_deviation_kpi!=null?pct(s.win_rate_vs_static.final_deviation_kpi,0):'—'}</td><td>${s.win_rate_vs_static.final_deviation_spend!=null?pct(s.win_rate_vs_static.final_deviation_spend,0):'—'}</td></tr>`).join('');
-    box.innerHTML = `<h3>Надёжность результата: ${cmp.seeds} парных миров, одна лента случайности для всех стратегий</h3><div class="scroll"><table><thead><tr><th>Стратегия</th><th>${h2('Откл. расхода', 'в конце')}</th><th>${h2('Откл. ' + K.many, 'в конце')}</th><th>${h2('Миров в пороге', pct(cmp.threshold,0))}</th><th>${h2('MAPE расхода', 'по часам')}</th><th>${h2('MAPE ' + K.many, 'по часам')}</th><th>${h2(cap(K.many) + ',', 'среднее')}</th><th>${h2('Расход,', 'среднее')}</th><th>${h2('Побед над заморозкой', 'по ' + K.dat)}</th><th>${h2('Побед', 'по расходу')}</th></tr></thead><tbody>${rows}</tbody></table></div>
+    box.innerHTML = `<h3>Надёжность результата: ${cmp.seeds} парных миров, одна лента случайности для всех стратегий</h3><div class="scroll"><table><thead><tr><th>Стратегия</th><th>${h2('Откл. расхода', 'в конце')}</th><th>${h2('Откл. ' + K.many, 'в конце')}</th><th>${h2('Миров в пороге', pct(cmp.threshold,0))}</th><th>${h2('MAPE расхода', 'по часам')}</th><th>${h2('MAPE ' + K.many, 'по часам')}</th><th>${h2(cap(K.many) + ',', 'среднее')}</th><th>${h2('Расход,', 'среднее')}</th><th>${h2('Побед над планом', 'без изменений по ' + K.dat)}</th><th>${h2('Побед', 'по расходу')}</th></tr></thead><tbody>${rows}</tbody></table></div>
       <div class="chart" style="height:230px;margin-top:12px"><canvas id="c-cmp-hist"></canvas></div>
-      <p class="muted">Один красивый мир не доказательство: здесь средние с 95 % доверительным интервалом; план ${kpiN(PLAN.total_kpi, PLAN.kpi_name)}. Гистограмма показывает, как отклонения по ${K.dat} разложились по мирам: важна не только средняя, но и хвост за порогом. Кейс называет метрикой MAPE накопительных рядов; мы читаем её как отклонение в конце кампании (порог 20 %) и показываем рядом MAPE по часам. По часам план без изменений часто ближе, потому что тратит ровно по плану; наше ведение сдвигает расход ради ${K.many} — это цена удержания результата, и она видна в столбце «по расходу». Сотни миров — офлайн-стенд <code>scripts/run_demos.py --seeds 100</code>.</p>`;
+      <p class="muted">Один красивый мир не доказательство: здесь средние с 95-процентным доверительным интервалом; план ${kpiN(PLAN.total_kpi, PLAN.kpi_name)}. Гистограмма показывает, как отклонения по ${K.dat} разложились по мирам: важны и средняя, и хвост за порогом. Сотни миров — офлайн-стенд <code>scripts/run_demos.py --seeds 100</code>.</p><p class="muted">Кейс называет метрикой MAPE накопительных рядов; мы читаем её как отклонение в конце кампании (порог 20 %) и показываем рядом MAPE по часам. По часам план без изменений часто ближе, потому что тратит ровно по плану; наше ведение сдвигает расход ради ${K.many} — это цена удержания результата, и она видна в столбце «по расходу».</p>`;
     histogram('c-cmp-hist', [{title: 'наше ведение', color: '#1F8A70', runs: (st.adaptive || {}).per_run || []}, {title: 'план без изменений', color: '#A9701A', runs: (st.static || {}).per_run || []}], cmp.threshold, K);
     fixHeaders(box);
   } catch (e) { box.innerHTML = `<p class="err">Сравнение не прошло: ${esc(ru(e.message))}</p>`; }
   $('#btn-compare').disabled = false;
 }
 
-// Гистограмма отклонений по мирам: корзины по 5 %, порог кейса вертикальной линией
+// Гистограмма отклонений по мирам: корзины по 5 %, порог кейса вертикальной линией
 function histogram(id, series, threshold, K) {
   const step = 5, vals = series.flatMap(s => s.runs.map(r => r.final_deviation_kpi * 100));
-  if (!vals.length) return;
+  if (!vals.length) { $('#' + id).parentElement.innerHTML = '<p class="muted">распределение по мирам недоступно: стенд не вернул прогоны</p>'; return; }
   const top = Math.max(Math.ceil((Math.max(...vals, threshold * 100) + 1) / step) * step, step);
   const bins = Array.from({length: top / step}, (_, i) => i * step);
   const count = (runs) => bins.map(b => runs.filter(r => { const x = r.final_deviation_kpi * 100; return x >= b && x < b + step; }).length);
   const thrMark = {id: 'thr', afterDraw(chart) { const i = Math.round(threshold * 100 / step); if (i <= 0 || i >= bins.length) return; const x = (chart.scales.x.getPixelForValue(i - 1) + chart.scales.x.getPixelForValue(i)) / 2; const ctx = chart.ctx; ctx.save(); ctx.strokeStyle = '#9C3A2B'; ctx.setLineDash([4,3]); ctx.beginPath(); ctx.moveTo(x, chart.chartArea.top); ctx.lineTo(x, chart.chartArea.bottom); ctx.stroke(); ctx.fillStyle = '#9C3A2B'; ctx.font = '11px system-ui'; ctx.fillText('порог ' + pct(threshold, 0), x + 4, chart.chartArea.top + 12); ctx.restore(); }};
   destroy(id);
   CHARTS[id] = new Chart($('#' + id), {type: 'bar', data: {labels: bins.map(b => `${b}–${b + step}`), datasets: series.map(s => ({label: s.title, data: count(s.runs), backgroundColor: s.color}))},
-    options: {responsive: true, maintainAspectRatio: false, animation: false, plugins: {title: {display: true, text: `Сколько миров попало в каждую полосу отклонения по ${K.dat} в конце кампании, %`}, legend: {position: 'bottom', labels: {boxWidth: 10}}}, scales: {y: {beginAtZero: true, ticks: {precision: 0}, title: {display: true, text: 'миров'}}}}, plugins: [thrMark]});
+    options: {responsive: true, maintainAspectRatio: false, animation: false, plugins: {title: {display: true, text: ['Сколько миров в каждой полосе отклонения', `по ${K.dat} в конце кампании, %`]}, legend: {position: 'bottom', labels: {boxWidth: 10}}}, scales: {y: {beginAtZero: true, ticks: {precision: 0}, title: {display: true, text: 'миров'}}}}, plugins: [thrMark]});
 }
 
 // Длинные заголовки столбцов переносятся в две строки, ячейки данных остаются в одну
-function fixHeaders(root=document) { root.querySelectorAll('th').forEach(th => { if (!th.querySelector('span.w') && th.textContent.trim().length > 11) th.innerHTML = '<span class="w">' + th.innerHTML + '</span>'; }); }
+function fixHeaders(root=document) { root.querySelectorAll('th').forEach(th => { if (!th.querySelector('span.w,span.w2') && th.textContent.trim().length > 11) th.innerHTML = '<span class="w">' + th.innerHTML + '</span>'; }); }
 function destroy(id) { if (CHARTS[id]) { CHARTS[id].destroy(); delete CHARTS[id]; } }
 function lineChart(id, labels, datasets, title, plugins=[], rawLabels=false) {
   destroy(id);
