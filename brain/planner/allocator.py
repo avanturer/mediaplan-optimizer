@@ -59,6 +59,7 @@ class ChannelModel:
         daily = total_budget / self.days
         imps_day = self.curve.impressions_at(daily)
         spend_day = self.curve.effective_spend(daily)
+        base_ctr, base_cvr = self.curve.rates_at(daily)
         cum = {key: np.zeros(self.days) for key in OUTCOME_KEYS}
         cum_imps = cum_reach = clicks = conv = spend = 0.0
         for d in range(self.days):
@@ -67,10 +68,10 @@ class ChannelModel:
             cum_imps += imps_day
             spend += spend_day
             freq = cum_imps / cum_reach if cum_reach > 0 else 1.0
-            ctr = self.curve.ctr / (1 + self.fatigue_delta * max(freq - 1, 0.0))
+            ctr = base_ctr / (1 + self.fatigue_delta * max(freq - 1, 0.0))
             day_clicks = imps_day * ctr
             clicks += day_clicks
-            conv += day_clicks * self.curve.cvr
+            conv += day_clicks * base_cvr
             cum["impressions"][d], cum["reach"][d], cum["clicks"][d] = cum_imps, cum_reach, clicks
             cum["conversions"][d], cum["spend"][d] = conv, spend
         return Outcome(cum_imps, cum_reach, clicks, conv, spend, cum)
@@ -118,6 +119,8 @@ def allocate(
     locked: dict[str, float] | None = None,
     max_cost_per_kpi: float | None = None,
     steps: int = STEPS,
+    reach_model=None,
+    prior_reach: dict[str, float] | None = None,
 ) -> AllocationResult:
     """Жадное наливание порциями ``budget / steps`` в канал с максимальным приростом KPI.
 
@@ -135,9 +138,12 @@ def allocate(
     frozen: dict[str, str] = {cid: "зафиксирован вручную" for cid in locked}
     order: list[str] = []
     explanation: list[str] = []
+    joint_reach = reach_model if kpi == "reach" else None
+    reach_values = {cid: model.value(budgets[cid], "reach") for cid, model in models.items()} if joint_reach else {}
 
     while free_budget >= eps * 0.5:
         best_cid, best_gain = None, 0.0
+        current_reach = joint_reach.incremental(reach_values, prior_reach) if joint_reach else 0
         for cid, model in models.items():
             if cid in frozen:
                 continue
@@ -146,6 +152,9 @@ def allocate(
                 frozen[cid] = "ёмкость исчерпана"
                 continue
             gain = model.value(b + eps, kpi) - model.value(b, kpi)
+            if joint_reach:
+                candidate = {**reach_values, cid: model.value(b + eps, "reach")}
+                gain = joint_reach.incremental(candidate, prior_reach) - current_reach
             if max_cost_per_kpi is not None and gain > 0 and eps / gain > max_cost_per_kpi:
                 frozen[cid] = f"следующая порция дороже лимита ({eps / gain:,.0f} ₽ за единицу KPI)"
                 continue
@@ -160,6 +169,8 @@ def allocate(
                 f"{eps / best_gain:,.0f} ₽ за единицу KPI"
             )
         budgets[best_cid] += eps
+        if joint_reach:
+            reach_values[best_cid] = models[best_cid].value(budgets[best_cid], "reach")
         free_budget -= eps
 
     for cid, reason in frozen.items():
@@ -170,6 +181,9 @@ def allocate(
     for cid, model in models.items():
         b = budgets[cid]
         gain = model.value(min(b + eps, model.max_budget), kpi) - model.value(b, kpi)
+        if joint_reach:
+            candidate = {**reach_values, cid: model.value(min(b + eps, model.max_budget), "reach")}
+            gain = joint_reach.incremental(candidate, prior_reach) - joint_reach.incremental(reach_values, prior_reach)
         marginal[cid] = eps / gain if gain > 1e-9 else None
     return AllocationResult(
         budgets=budgets,

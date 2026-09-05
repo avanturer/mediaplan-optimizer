@@ -13,7 +13,9 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from brain.curves import ResponseCurve
+from brain.ml import MLBundle
 from contracts import MediaPlan, PublicCatalog, RunSummary, SeedBundle, ShockEvent
+from contracts.ml import MLConfig
 from harness.runner import RunConfig, run_campaign
 from world.settings import WorldSettings
 from world.simulator import Simulator
@@ -56,14 +58,18 @@ def compare_strategies(
     catalog_seed: int = 0,
     first_seed: int = 1,
     world_settings: WorldSettings | None = None,
+    ml: MLConfig | None = None,
+    ml_bundle: MLBundle | None = None,
+    hold_plan: bool = True,
 ) -> dict[str, StrategyStats]:
     sim = Simulator(catalog, settings=world_settings)
     results: dict[str, list[RunSummary]] = {s: [] for s in strategies}
     for k in range(first_seed, first_seed + seeds):
         bundle = SeedBundle(catalog_seed=catalog_seed, world_seed=k, noise_seed=10_000 + k)
         for strategy in strategies:
-            config = RunConfig(strategy=strategy, scenario_id=scenario_id, seeds=bundle, injected=list(injected or []))
-            results[strategy].append(run_campaign(plan, catalog, curves, config, simulator=sim))
+            config = RunConfig(strategy=strategy, scenario_id=scenario_id, seeds=bundle, injected=list(injected or []),
+                               ml=ml if strategy != "static" and ml else MLConfig(), hold_plan=hold_plan)
+            results[strategy].append(run_campaign(plan, catalog, curves, config, simulator=sim, ml_bundle=ml_bundle))
 
     stats: dict[str, StrategyStats] = {}
     base = results.get("static")

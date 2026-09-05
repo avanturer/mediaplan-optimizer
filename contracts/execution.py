@@ -9,6 +9,8 @@ from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
+from contracts.ml import MLConfig, MLForecast, MLSignal
+
 
 class ChannelStatus(StrEnum):
     ACTIVE = "active"
@@ -91,6 +93,8 @@ class HourRecord(BaseModel):
     tracking_error_kpi: float = 0.0
     reserve_rub: float = 0.0
     deduplicated_reach: int = 0
+    ml_forecast: MLForecast | None = None
+    ml_signals: dict[str, MLSignal] = Field(default_factory=dict)
 
 
 class RunSummary(BaseModel):
@@ -119,3 +123,5 @@ class RunSummary(BaseModel):
     proposals: list[Proposal] = Field(default_factory=list)
     hours: list[HourRecord] = Field(default_factory=list)
     runtime_seconds: float = 0.0
+    ml: MLConfig = Field(default_factory=MLConfig)
+    ml_model_id: str | None = None

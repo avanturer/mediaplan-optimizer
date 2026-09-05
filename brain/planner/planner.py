@@ -16,6 +16,7 @@ import numpy as np
 from brain.assumptions import campaign_audience_multiplier, fatigue_delta
 from brain.config import CORRIDOR_SIGMA_DIVISOR
 from brain.curves import ResponseCurve
+from brain.ml import MLBundle, ReachModel
 from brain.planner.allocator import AllocationResult, ChannelModel, allocate, build_models
 from contracts import (
     BindingConstraint,
@@ -37,6 +38,8 @@ class PlanningContext:
     curves: dict[str, ResponseCurve]
     channel_ids: list[str]
     days: int
+    reach_model: ReachModel | None = None
+    ml_model_id: str | None = None
 
     def models(self, days: int | None = None) -> dict[str, ChannelModel]:
         d = days or self.days
@@ -49,41 +52,51 @@ class PlanningContext:
         )
 
 
-def plan(brief: Brief, catalog: PublicCatalog, curves: dict[str, ResponseCurve]) -> MediaPlan:
+def plan(brief: Brief, catalog: PublicCatalog, curves: dict[str, ResponseCurve], ml_bundle: MLBundle | None = None) -> MediaPlan:
     if brief.targeting != catalog.targeting:
         raise ValueError("таргетинг брифа и каталога должен совпадать; соберите ретро-историю выбранного сегмента")
+    if brief.ml.enabled:
+        if ml_bundle is None or ml_bundle.catalog_id != catalog.catalog_id:
+            raise ValueError("для ML нужен обученный артефакт выбранного сегмента")
+        if brief.ml.response_curves:
+            curves = ml_bundle.curves
     missing = [cid for cid in brief.channel_ids if cid not in curves]
     if missing:
         raise ValueError(f"нет кривых для каналов {missing}")
-    ctx = PlanningContext(catalog, curves, list(brief.channel_ids), brief.horizon_days)
+    reach_model = ml_bundle.reach if brief.ml.reach_correction and ml_bundle else None
+    model_id = ml_bundle.model_id if brief.ml.enabled and ml_bundle else None
+    ctx = PlanningContext(catalog, curves, list(brief.channel_ids), brief.horizon_days, reach_model, model_id)
     models = ctx.models()
     kpi = brief.kpi_name
 
     if brief.is_budget_constrained:
         assert brief.budget_rub is not None
-        result = allocate(models, brief.budget_rub, kpi, brief.locked, brief.max_cpa_rub)
+        result = allocate(models, brief.budget_rub, kpi, brief.locked, brief.max_cpa_rub, reach_model=reach_model)
         return _assemble(brief, catalog, ctx, models, result, kpi)
 
     assert brief.target_value is not None
     diagnosis = _diagnose(brief, catalog, ctx, models, kpi)
     if diagnosis is not None:
         return MediaPlan(
-            plan_id=_plan_id(brief, catalog),
+            plan_id=_plan_id(brief, catalog) + (f"-{model_id[:8]}" if model_id else ""),
+            ml_model_id=model_id,
             catalog_id=catalog.catalog_id,
             brief=brief,
             kpi_name=kpi,
             infeasibility=diagnosis,
         )
-    budget = _min_budget_for(models, brief.target_value, kpi, brief.locked, brief.max_cpa_rub)
-    result = allocate(models, budget, kpi, brief.locked, brief.max_cpa_rub)
+    budget = _min_budget_for(models, brief.target_value, kpi, brief.locked, brief.max_cpa_rub, reach_model)
+    result = allocate(models, budget, kpi, brief.locked, brief.max_cpa_rub, reach_model=reach_model)
     return _assemble(brief, catalog, ctx, models, result, kpi)
 
 
 # ----------------------------------------------------------------- тип B
 
 
-def _total_kpi(models: dict[str, ChannelModel], budget: float, kpi: str, locked, max_cpa) -> float:
-    result = allocate(models, budget, kpi, locked, max_cpa, steps=300)
+def _total_kpi(models: dict[str, ChannelModel], budget: float, kpi: str, locked, max_cpa, reach_model=None) -> float:
+    result = allocate(models, budget, kpi, locked, max_cpa, steps=300, reach_model=reach_model)
+    if kpi == "reach" and reach_model is not None:
+        return reach_model.predict({cid: models[cid].value(b, kpi) for cid, b in result.budgets.items()})
     return sum(models[cid].value(b, kpi) for cid, b in result.budgets.items())
 
 
@@ -91,11 +104,11 @@ def _max_budget(models: dict[str, ChannelModel]) -> float:
     return sum(m.max_budget for m in models.values())
 
 
-def _min_budget_for(models, target: float, kpi: str, locked, max_cpa) -> float:
+def _min_budget_for(models, target: float, kpi: str, locked, max_cpa, reach_model=None) -> float:
     lo, hi = 0.0, _max_budget(models)
     for _ in range(40):
         mid = (lo + hi) / 2
-        if _total_kpi(models, mid, kpi, locked, max_cpa) >= target:
+        if _total_kpi(models, mid, kpi, locked, max_cpa, reach_model) >= target:
             hi = mid
         else:
             lo = mid
@@ -105,7 +118,7 @@ def _min_budget_for(models, target: float, kpi: str, locked, max_cpa) -> float:
 def _diagnose(brief: Brief, catalog: PublicCatalog, ctx: PlanningContext, models, kpi: str) -> Infeasibility | None:
     target = brief.target_value
     assert target is not None
-    max_kpi = _total_kpi(models, _max_budget(models), kpi, brief.locked, brief.max_cpa_rub)
+    max_kpi = _total_kpi(models, _max_budget(models), kpi, brief.locked, brief.max_cpa_rub, ctx.reach_model)
     if max_kpi >= target:
         return None
 
@@ -114,9 +127,9 @@ def _diagnose(brief: Brief, catalog: PublicCatalog, ctx: PlanningContext, models
     min_days = None
     for days in range(brief.horizon_days + 1, 91):
         m = ctx.models(days)
-        if _total_kpi(m, _max_budget(m), kpi, brief.locked, brief.max_cpa_rub) >= target:
+        if _total_kpi(m, _max_budget(m), kpi, brief.locked, brief.max_cpa_rub, ctx.reach_model) >= target:
             min_days = days
-            budget = _min_budget_for(m, target, kpi, brief.locked, brief.max_cpa_rub)
+            budget = _min_budget_for(m, target, kpi, brief.locked, brief.max_cpa_rub, ctx.reach_model)
             suggestions.append(
                 BriefSuggestion(
                     description=f"Увеличить срок до {days} дней",
@@ -129,7 +142,7 @@ def _diagnose(brief: Brief, catalog: PublicCatalog, ctx: PlanningContext, models
             break
     # 2. снизить цель до достижимого максимума с запасом 5 %
     reachable = max_kpi * 0.95
-    budget_for_reachable = _min_budget_for(models, reachable, kpi, brief.locked, brief.max_cpa_rub)
+    budget_for_reachable = _min_budget_for(models, reachable, kpi, brief.locked, brief.max_cpa_rub, ctx.reach_model)
     suggestions.append(
         BriefSuggestion(
             description=f"Снизить цель до {reachable:,.0f} {kpi} в срок",
@@ -142,11 +155,11 @@ def _diagnose(brief: Brief, catalog: PublicCatalog, ctx: PlanningContext, models
     # 3. добавить каналы, которых нет в пресете
     extra = [cid for cid in catalog.channel_ids if cid not in brief.channel_ids and cid in ctx.curves]
     if extra:
-        wide = PlanningContext(catalog, ctx.curves, list(brief.channel_ids) + extra, brief.horizon_days)
+        wide = PlanningContext(catalog, ctx.curves, list(brief.channel_ids) + extra, brief.horizon_days, ctx.reach_model, ctx.ml_model_id)
         wide_models = wide.models()
-        wide_max = _total_kpi(wide_models, _max_budget(wide_models), kpi, brief.locked, brief.max_cpa_rub)
+        wide_max = _total_kpi(wide_models, _max_budget(wide_models), kpi, brief.locked, brief.max_cpa_rub, ctx.reach_model)
         if wide_max >= target:
-            budget = _min_budget_for(wide_models, target, kpi, brief.locked, brief.max_cpa_rub)
+            budget = _min_budget_for(wide_models, target, kpi, brief.locked, brief.max_cpa_rub, ctx.reach_model)
             suggestions.append(
                 BriefSuggestion(
                     description=f"Добавить каналы: {', '.join(extra)}",
@@ -192,6 +205,7 @@ def _assemble(brief: Brief, catalog: PublicCatalog, ctx: PlanningContext, models
     calendar: list[CalendarCell] = []
     hourly_caps: list[dict[str, float]] = [{} for _ in range(hours)]
     per_channel_cum_spend = {cid: np.zeros(hours) for cid in ctx.channel_ids}
+    per_channel_cum_reach = {cid: np.zeros(hours) for cid in ctx.channel_ids}
     cum = {k: np.zeros(hours) for k in ("spend", "impressions", "clicks", "conversions", "reach")}
 
     budget_total = sum(result.budgets.values())
@@ -219,6 +233,8 @@ def _assemble(brief: Brief, catalog: PublicCatalog, ctx: PlanningContext, models
                 block = hourly_spend[day * 24 : (day + 1) * 24]
                 within = np.cumsum(block) / block.sum() if block.sum() > 0 else np.linspace(1 / 24, 1, 24)
                 cum[key][day * 24 : (day + 1) * 24] += prev + day_total * within
+                if key == "reach":
+                    per_channel_cum_reach[cid][day * 24 : (day + 1) * 24] = prev + day_total * within
         for h in range(hours):
             hourly_caps[h][cid] = float(hourly_spend[h])
         for day in range(1, days + 1):
@@ -260,6 +276,8 @@ def _assemble(brief: Brief, catalog: PublicCatalog, ctx: PlanningContext, models
             # диапазон каталога трактуем как P10–P90; коридор ±1σ = полуширина / z(0.90)
             corridor_rel += ctx.curves[cid].uncertainty / CORRIDOR_SIGMA_DIVISOR * (b / budget_total)
 
+    if ctx.reach_model is not None:
+        cum["reach"] = np.array([ctx.reach_model.predict({cid: values[h] for cid, values in per_channel_cum_reach.items()}) for h in range(hours)])
     kpi_curve = cum[kpi]
     trajectory = [
         TrajectoryPoint(
@@ -288,13 +306,17 @@ def _assemble(brief: Brief, catalog: PublicCatalog, ctx: PlanningContext, models
         ),
     )
     explanation = list(result.steps)
-    explanation.append("Прогноз охвата суммирует каналы и не учитывает межканальные пересечения; фактический охват кампании дедуплицируется.")
+    explanation.append("ML: прогноз охвата скорректирован моделью, обученной на общих охватах ретро-кампаний."
+                       if ctx.reach_model else "Прогноз охвата суммирует каналы и не учитывает межканальные пересечения; фактический охват кампании дедуплицируется.")
+    if brief.ml.response_curves:
+        explanation.append("ML: распределение использует обученные кривые показов, кликов и конверсий по бюджету.")
     if result.unspent > 0:
         explanation.append(
             f"не распределено {result.unspent:,.0f} ₽: все каналы упёрлись в потолок или в лимит цены"
         )
     return MediaPlan(
-        plan_id=_plan_id(brief, catalog),
+        plan_id=_plan_id(brief, catalog) + (f"-{ctx.ml_model_id[:8]}" if ctx.ml_model_id else ""),
+        ml_model_id=ctx.ml_model_id,
         catalog_id=catalog.catalog_id,
         brief=brief,
         kpi_name=kpi,

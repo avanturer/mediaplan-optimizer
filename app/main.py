@@ -29,8 +29,10 @@ from contracts import (
     ShockEvent,
     ShockParameter,
 )
+from contracts.ml import MLConfig
 from contracts.targeting import AudienceTargeting
 from harness.compare import compare_strategies
+from harness.ml_training import train_ml_bundle
 from harness.retro import collect_retro_history
 from harness.runner import RunConfig, run_campaign
 from world import SCENARIOS, build_catalog
@@ -97,6 +99,7 @@ class BriefRequest(BaseModel):
     locked: dict[str, float] = Field(default_factory=dict)
     automation_limit_rub: float | None = None
     targeting: AudienceTargeting = Field(default_factory=AudienceTargeting)
+    ml: MLConfig = Field(default_factory=MLConfig)
 
 
 class ShockRequest(BaseModel):
@@ -119,6 +122,7 @@ class RunRequest(BaseModel):
     hold_plan: bool = True
     approved_hours: list[int] = Field(default_factory=list)
     world_settings: WorldSettings | None = None
+    ml: MLConfig = Field(default_factory=MLConfig)
 
 
 class DecideRequest(BaseModel):
@@ -134,6 +138,7 @@ class DegradationRequest(BaseModel):
     start_hour: int = 240
     multipliers: list[float] = Field(default_factory=lambda: [1.0, 0.8, 0.6, 0.4, 0.2])
     hold_plan: bool = True
+    ml: MLConfig = Field(default_factory=MLConfig)
 
 
 class CompareRequest(BaseModel):
@@ -143,12 +148,14 @@ class CompareRequest(BaseModel):
     shock: ShockRequest | None = None
     hold_plan: bool = True
     world_settings: WorldSettings | None = None
+    ml: MLConfig = Field(default_factory=MLConfig)
 
 
 class StressRequest(BaseModel):
     plan_id: str
     world_seed: int = 1
     hold_plan: bool = True
+    ml: MLConfig = Field(default_factory=MLConfig)
 
 
 # --------------------------------------------------------------- endpoints
@@ -182,6 +189,7 @@ def make_plan(req: BriefRequest) -> dict[str, Any]:
         "locked": req.locked,
         "automation_limit_rub": req.automation_limit_rub,
         "targeting": req.targeting,
+        "ml": req.ml,
     }
     if req.mode == "A":
         payload["budget_rub"] = req.budget_rub
@@ -191,7 +199,8 @@ def make_plan(req: BriefRequest) -> dict[str, Any]:
     try:
         brief = Brief(**payload)
         catalog, curves = _target_context(brief.targeting.model_dump_json())
-        media_plan = build_plan(brief, catalog, curves)
+        bundle = _ml_context(brief.targeting.model_dump_json()) if brief.ml.enabled else None
+        media_plan = build_plan(brief, catalog, curves, ml_bundle=bundle)
     except (ValueError, KeyError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     state.plans[media_plan.plan_id] = media_plan
@@ -229,14 +238,24 @@ def _run(req: RunRequest, decisions: dict[int, str] | None = None) -> dict[str, 
             req.strategy, req.scenario_id, seeds, injected, req.auto_apply_above_limit,
             hold_plan=req.hold_plan, approved_hours=tuple(req.approved_hours),
             world_settings=req.world_settings,
+            ml=req.ml,
         ),
+        ml_bundle=_ml_context(media_plan.brief.targeting.model_dump_json()) if req.ml.enabled else None,
     )
     twin = main if req.strategy == "static" else run_campaign(media_plan, catalog, curves, RunConfig("static", req.scenario_id, seeds, injected, world_settings=req.world_settings))
     run_id = uuid.uuid4().hex[:8]
+    without_ml = run_campaign(media_plan, catalog, curves, RunConfig(
+        req.strategy, req.scenario_id, seeds, injected, req.auto_apply_above_limit,
+        hold_plan=req.hold_plan, approved_hours=tuple(req.approved_hours), world_settings=req.world_settings,
+    )) if req.ml.enabled else main
     view = {
         "run_id": run_id,
         "main": _run_view(main),
         "frozen": _run_view(twin),
+        "without_ml": _run_view(without_ml),
+        "ml_comparison": {"kpi_delta": main.actual_kpi-without_ml.actual_kpi,
+                          "spend_delta": main.actual_spend-without_ml.actual_spend,
+                          "wape_delta": main.wape_kpi-without_ml.wape_kpi},
         "verdict": _verdict(media_plan, main, twin),
         "decisions": decisions or {},
     }
@@ -283,7 +302,8 @@ def degradation(req: DegradationRequest) -> dict[str, Any]:
     rows = []
     for mult in req.multipliers:
         injected = [] if abs(mult - 1.0) < 1e-9 else [_shock(ShockRequest(channel_id=req.channel_id, parameter=req.parameter, multiplier=mult, start_hour=req.start_hour))]
-        adaptive = run_campaign(media_plan, catalog, curves, RunConfig("adaptive", "stable", seeds, injected, hold_plan=req.hold_plan))
+        adaptive = run_campaign(media_plan, catalog, curves, RunConfig("adaptive", "stable", seeds, injected, hold_plan=req.hold_plan, ml=req.ml),
+                                ml_bundle=_ml_context(media_plan.brief.targeting.model_dump_json()) if req.ml.enabled else None)
         frozen = run_campaign(media_plan, catalog, curves, RunConfig("static", "stable", seeds, injected))
         rows.append(
             {
@@ -307,7 +327,8 @@ def compare(req: CompareRequest) -> dict[str, Any]:
     catalog, curves = _context(media_plan)
     injected = [_shock(req.shock)] if req.shock else []
     stats = compare_strategies(media_plan, catalog, curves, scenario_id=req.scenario_id, seeds=min(max(req.seeds, 2), 30), injected=injected,
-                               world_settings=req.world_settings)
+                               world_settings=req.world_settings, hold_plan=req.hold_plan, ml=req.ml,
+                               ml_bundle=_ml_context(media_plan.brief.targeting.model_dump_json()) if req.ml.enabled else None)
     return {name: st.to_dict() for name, st in stats.items()}
 
 
@@ -319,7 +340,8 @@ def stress(req: StressRequest) -> dict[str, Any]:
     seeds = SeedBundle(catalog_seed=0, world_seed=req.world_seed, noise_seed=10_000 + req.world_seed)
     rows = []
     for scenario_id in SCENARIOS:
-        adaptive = run_campaign(media_plan, catalog, curves, RunConfig("adaptive", scenario_id, seeds, hold_plan=req.hold_plan))
+        adaptive = run_campaign(media_plan, catalog, curves, RunConfig("adaptive", scenario_id, seeds, hold_plan=req.hold_plan, ml=req.ml),
+                                ml_bundle=_ml_context(media_plan.brief.targeting.model_dump_json()) if req.ml.enabled else None)
         frozen = run_campaign(media_plan, catalog, curves, RunConfig("static", scenario_id, seeds))
         rows.append(
             {
@@ -356,6 +378,12 @@ def _context(media_plan: MediaPlan) -> tuple[PublicCatalog, dict[str, ResponseCu
     return _target_context(media_plan.brief.targeting.model_dump_json())
 
 
+@lru_cache(maxsize=8)
+def _ml_context(targeting_json: str):
+    catalog, curves = _target_context(targeting_json)
+    return train_ml_bundle(catalog, curves)
+
+
 def _plan(plan_id: str) -> MediaPlan:
     try:
         return state.plans[plan_id]
@@ -383,6 +411,13 @@ def _plan_view(media_plan: MediaPlan) -> dict[str, Any]:
     data["total_budget_rub"] = media_plan.total_budget_rub
     data["total_kpi"] = media_plan.total_kpi
     data["approved_version"] = state.approved.get(media_plan.plan_id, 0)
+    if media_plan.brief.ml.enabled:
+        bundle = _ml_context(media_plan.brief.targeting.model_dump_json())
+        _, baseline = _context(media_plan)
+        data["ml_training"] = bundle.training_summary
+        data["ml_curves"] = {cid: [dict(budget=p.daily_spend, ml=p.conversions,
+             baseline=baseline[cid].impressions_at(p.daily_spend)*baseline[cid].ctr*baseline[cid].cvr)
+             for p in curve.points] for cid, curve in bundle.curves.items()}
     return data
 
 
@@ -403,6 +438,8 @@ def _run_view(summary: RunSummary) -> dict[str, Any]:
             "err_kpi": h["tracking_error_kpi"],
             "reserve": h["reserve_rub"],
             "deduplicated_reach": h["deduplicated_reach"],
+            "ml_forecast": h["ml_forecast"],
+            "ml_signals": h["ml_signals"],
         }
         for h in data["hours"]
     ]
