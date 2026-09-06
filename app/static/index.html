@@ -297,8 +297,9 @@ const budgetHint = () => { const v = num('budget'); $('#budget-hint').textConten
 const spct = (x) => (x > 0 ? '+' : '') + pct(x); // Δ со знаком в обе стороны
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const STATUS_RU = {ok:'в норме', watch:'наблюдаем', fire:'сбой канала'};
+// CPA, CPC — профессиональные термины (решение основателя 06.09): пишем как есть, расшифровка — в подсказке при наведении
 const PRICE_RU = {conversions: 'цена конверсии', clicks: 'цена клика', reach: 'цена за одного'};
-const priceWord = (k, capital=false) => `<span class="tech">${KPI[k].price}</span><span class="simple">${capital ? cap(PRICE_RU[k]) : PRICE_RU[k]}</span>`;
+const priceWord = (k, capital=false) => `<abbr title="${PRICE_RU[k]}, ₽" style="text-decoration:none">${capital ? cap(KPI[k].price) : KPI[k].price}</abbr>`;
 const SHOCK_PARAM_RU = {ecpm:'цена (eCPM)', ctr:'кликабельность (CTR)', cvr:'конверсия (CR)', inventory:'инвентарь', demand:'спрос', pause:'пауза канала'};
 // Цвета графиков из токенов системы: чернила, акцент, нейтраль
 const INK = '#201e1d', ACC = '#ec3013', ACC7 = '#ae1800', NEU = '#9b9797', CORR = '#bab6b6', GRID = '#d7d3d3';
@@ -602,7 +603,7 @@ function renderPlanTable(p) {
   // ключевой столбец четвёртым в обоих режимах — глаз не теряет якорь; «Выкуп» сразу за ним, потому что на него ссылается плитка
   const head = all
     ? `<th>Канал</th><th>Бюджет, ₽</th><th>Доля</th><th class="key">${marginalLabel(p.kpi_name)}</th><th>${h2('Выкуп', 'аудитории')}</th><th>Показы</th><th>Охват</th><th>Клики</th><th>Конверсии</th><th>CTR</th><th>VTR*</th><th>CR</th><th>CPM</th><th>CPC</th><th>CPA</th>`
-    : simple ? `<th>Канал</th><th>Бюджет, ₽</th><th>Доля</th><th class="key">${cap(K.nomPl)}</th><th class="key">${K.price === 'CPA' ? 'Цена конверсии' : K.price === 'CPC' ? 'Цена клика' : 'Цена за одного'}, ₽</th>`
+    : simple ? `<th>Канал</th><th>Бюджет, ₽</th><th>Доля</th><th class="key">${cap(K.nomPl)}</th><th class="key">${K.price}, ₽</th>`
     : `<th>Канал</th><th>Бюджет, ₽</th><th>Доля</th><th class="key">${marginalLabel(p.kpi_name)}</th><th>${h2('Выкуп', 'аудитории')}</th><th>${cap(K.nomPl)}</th><th>${K.price}, ₽</th>`;
   const rows = p.allocations.map(a => all
     ? `<tr>${nameCell(a)}<td>${fmt(a.budget_rub)}</td><td>${pct(a.budget_rub/p.total_budget_rub)}</td><td class="key">${fmt(marginalValue(a, p.kpi_name))}</td><td>${pct(a.capacity_utilization,0)}</td><td>${fmt(a.impressions)}</td><td>${fmt(a.unique_reach)}</td><td>${fmt(a.clicks)}</td><td>${fmt(a.conversions)}</td><td>${pct(a.ctr,2)}</td><td>${a.vtr!=null?pct(a.vtr,0)+'*':'—'}</td><td>${pct(a.cvr,2)}</td><td>${fmt(a.cpm_rub)}</td><td>${fmt(a.cpc_rub)}</td><td>${fmt(a.cpa_rub)}</td></tr>`
