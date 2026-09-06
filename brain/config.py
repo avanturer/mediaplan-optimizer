@@ -61,6 +61,8 @@ ERROR_BANDS: tuple[tuple[float, float], ...] = tuple(
 )
 LAMBDA_MIN, LAMBDA_MAX = (float(x) for x in const("controller", "lambda_bounds"))
 REPLAN_EVERY_HOURS: int = int(const("controller", "replan_every_hours"))
+REPLAN_WARMUP_HOURS: int = int(const("controller", "replan_warmup_hours"))
+CASE_THRESHOLD: float = float(const("controller", "case_threshold"))
 SHARE_RATE_LIMIT: float = float(const("controller", "share_rate_limit"))
 PAUSE_AFTER_HOURS: int = int(const("controller", "pause_after_hours"))
 PROBE_SHARE: float = float(const("controller", "probe_share"))

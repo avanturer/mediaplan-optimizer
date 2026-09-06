@@ -199,3 +199,45 @@ def test_rejected_hours_revert_a_move(demo_plan, catalog, curves):
     same = [p for p in reverted.proposals if p.hour == target.hour]
     assert same and same[0].applied_by == "rejected"
     assert reverted.actual_spend != base.actual_spend or reverted.actual_kpi != base.actual_kpi
+
+
+def test_no_scheduled_replan_in_first_day(demo_plan, catalog, curves):
+    """Первые сутки исполняется утверждённый план: ни одной карточки автоматики до 24-го часа
+    в спокойном мире (перерешение по событию разрешено, но без шока событий нет)."""
+    summary = run_campaign(demo_plan, catalog, curves, _cfg("adaptive"))
+    early = [p for p in summary.proposals if p.hour < 24]
+    assert not early, [(p.hour, p.from_channel, p.to_channel, p.amount_rub) for p in early]
+
+
+def test_status_follows_case_threshold(demo_plan, catalog, curves):
+    from brain.config import CASE_THRESHOLD
+    from brain.executor import make_executor
+    from contracts import TrackingStatus
+
+    ex = make_executor("adaptive", demo_plan, catalog, curves, demo_plan.total_budget_rub)
+    ex.hour = 100
+    assert ex._status(0.0, CASE_THRESHOLD / 2 - 0.01) == TrackingStatus.OK
+    assert ex._status(0.0, CASE_THRESHOLD / 2 + 0.01) == TrackingStatus.WATCH
+    assert ex._status(0.0, CASE_THRESHOLD + 0.01) == TrackingStatus.FIRE
+    assert ex._status(-(CASE_THRESHOLD + 0.01), 0.0) == TrackingStatus.FIRE
+
+
+def test_locked_channel_is_never_a_donor(demo_brief, catalog, curves):
+    from brain.planner import plan
+
+    locked = demo_brief.model_copy(update={"locked": {"sms": 300_000.0}})
+    p = plan(locked, catalog, curves)
+    summary = run_campaign(p, catalog, curves, _cfg("adaptive"))
+    moved = [pr for pr in summary.proposals if pr.from_channel == "sms" or pr.to_channel == "sms"]
+    assert not moved, [(pr.hour, pr.from_channel, pr.to_channel, pr.amount_rub) for pr in moved]
+
+
+def test_reach_detector_silent_without_shock(demo_brief, catalog, curves):
+    from brain.planner import plan
+    from contracts import Objective
+
+    reach_brief = demo_brief.model_copy(update={"objective": Objective.MAX_REACH})
+    p = plan(reach_brief, catalog, curves)
+    for seed in (1, 2):
+        summary = run_campaign(p, catalog, curves, _cfg("static", world_seed=seed))
+        assert not summary.detection_hours, summary.detection_hours

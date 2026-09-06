@@ -242,10 +242,15 @@ class ChannelEstimate:
         # Первый сигнал: клики на рубль. Они идут первыми при подорожании, падении
         # CTR и сжатии ёмкости, и растут первыми при фроде. Второй сигнал: конверсии
         # на рубль, KPI кейса; ловит падение CR, которого клики не видят.
-        signal = float(obs.clicks) if kpi != "reach" else float(obs.unique_reach)
         day = min(max(hour - 1, 0) // 24, len(self.plan_clicks_per_rub_by_day) - 1)
         expected_rate = (self.plan_clicks_per_rub_by_day[day] if self.plan_clicks_per_rub_by_day else 1.0) * rate_scale
-        event = self.detector.update(signal, obs.spend, expected_rate, hour, impressions=float(obs.impressions))
+        if kpi == "reach":
+            # Новый охват на рубль убывает с насыщением пула быстрее кликов, и сравнение с плановыми
+            # кликами на рубль давало 5–7 ложных тревог за спокойную кампанию (ревью 06.09).
+            # Для цели «охват» детектор по отдаче выключен: слом ловится паузой и расходом.
+            event = None
+        else:
+            event = self.detector.update(float(obs.clicks), obs.spend, expected_rate, hour, impressions=float(obs.impressions))
         self.last_signal = "clicks" if event else None
         if event is None and kpi == "conversions":
             # плановая отдача по конверсиям пропорциональна кликам на рубль (CR плана постоянен по дням)

@@ -13,7 +13,8 @@
   распределение остатка тем же жадным алгоритмом на кривых, поправленных
   фактом (receding horizon); внутренний держит темп бакетизированным
   мультипликативным множителем (arXiv:2509.25429) с мёртвой зоной и
-  ограничителями. Детектор CUSUM переключает оценки и вызывает перерешение.
+  ограничителями. Детектор по окнам с тестом значимости переключает оценки
+  и вызывает перерешение.
 """
 
 from __future__ import annotations
@@ -26,6 +27,7 @@ import numpy as np
 from brain.assumptions import campaign_audience_multiplier, fatigue_delta
 from brain.config import (
     CARD_MIN_INTERVAL_HOURS,
+    CASE_THRESHOLD,
     DEAD_ZONE,
     DETECTOR_MIN_EXPECTED_EVENTS,
     ERROR_BANDS,
@@ -42,6 +44,7 @@ from brain.config import (
     REPLAN_EVERY_HOURS,
     REPLAN_GRID_SIZE,
     REPLAN_STEPS,
+    REPLAN_WARMUP_HOURS,
     RESERVE_STEP_SHARE,
     RESERVE_WARMUP_SHARE,
     SHARE_RATE_LIMIT,
@@ -203,8 +206,15 @@ class BaseExecutor:
     def _status(self, err_spend: float, err_kpi: float) -> TrackingStatus:
         if any(est.shock_active for est in self.estimates.values()):
             return TrackingStatus.FIRE
-        band = max(self.plan.corridor_rel, DEAD_ZONE)
-        if abs(err_spend) > band or abs(err_kpi) > band:
+        # Пороги статуса привязаны к порогу приёмки кейса, а не к коридору плана: коридор
+        # ±35 % показывал «в норме» при отставании на 25 % (ревью 06.09). В первые сутки
+        # ошибка темпа считается от маленького плана и шумит, статус там только по детектору.
+        if self.hour < REPLAN_WARMUP_HOURS:
+            return TrackingStatus.OK
+        worst = max(abs(err_spend), abs(err_kpi))
+        if worst > CASE_THRESHOLD:
+            return TrackingStatus.FIRE
+        if worst > CASE_THRESHOLD / 2:
             return TrackingStatus.WATCH
         return TrackingStatus.OK
 
@@ -379,7 +389,12 @@ class AdaptiveExecutor(BaseExecutor):
     def _caps(self, h: int, remaining_budget: float) -> dict[str, float]:
         if self.pending_replan or h - self.last_replan_hour >= REPLAN_EVERY_HOURS:
             self._update_lambda(h)  # темп корректируется блоками, а не каждый час: меньше дёрганья
-            self._replan(h, remaining_budget)
+            if self.pending_replan or h >= REPLAN_WARMUP_HOURS:
+                self._replan(h, remaining_budget)
+            else:
+                # первые сутки исполняется утверждённый план как есть: переоптимизация по шести
+                # ночным часам переворачивала план и просила человека вернуть всё через сутки
+                self.last_replan_hour = h
         caps = {}
         for cid in self.channel_ids:
             share, tail = self._profile_tail(cid, h)
@@ -470,6 +485,11 @@ class AdaptiveExecutor(BaseExecutor):
             if h - t < CARD_MIN_INTERVAL_HOURS and not self.estimates[cid].shock_active and cid not in self.unavailable
         }
         locked = {cid: min(old_left[cid], budget_to_use) for cid in self.frozen_donors | recent_takers if cid in old_left}
+        # фиксация канала руками в брифе действует и в исполнении: зафиксированный канал не донор
+        # и не получатель, пока по нему не сработал детектор или он не встал на паузу
+        for cid in self.plan.brief.locked:
+            if cid in old_left and cid not in self.unavailable and not self.estimates[cid].shock_active:
+                locked[cid] = min(old_left[cid], budget_to_use)
         if sum(locked.values()) > budget_to_use:
             scale = budget_to_use / sum(locked.values())
             locked = {cid: v * scale for cid, v in locked.items()}

@@ -147,6 +147,16 @@ controller:
     status: calibrated
     test: "tests/test_executor.py::test_full_run_is_fast"
     note: "перерешение раз в 6 часов и по событию: компромисс скорости и качества"
+  replan_warmup_hours:
+    value: 24
+    status: calibrated
+    test: "tests/test_executor.py::test_no_scheduled_replan_in_first_day"
+    note: "первые сутки исполнитель воспроизводит утверждённый план: шести ночных часов мало, чтобы переоптимизировать по приору (ревью 06.09: перенос 62 тыс. ₽ в SMS ночью и разворот через сутки); перерешение по событию (детектор, пауза) разрешено и в первые сутки; сутки как ритм лимита доли"
+  case_threshold:
+    value: 0.20
+    status: calibrated
+    test: "tests/test_executor.py::test_status_follows_case_threshold"
+    note: "порог приёмки кейса: отклонение в конце не более 20 %. Статус «пожар» с порога или при активном детекторе, «наблюдаем» с половины порога; раньше полоса статуса равнялась коридору ±35 % и −25 % по KPI показывалось как «в норме»"
   share_rate_limit:
     value: 0.30
     status: sourced

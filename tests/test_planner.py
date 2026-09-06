@@ -86,12 +86,10 @@ def test_locked_channel_is_respected(catalog, curves, demo_brief):
 def test_max_cpa_freezes_expensive_channels(catalog, curves, demo_brief):
     capped = demo_brief.model_copy(update={"max_cpa_rub": 500.0})
     p = plan(capped, catalog, curves)
-    # Лимит задан на среднюю цену конверсии; при вогнутой кривой средняя цена ниже предельной,
-    # а предельная цена следующей порции у остановленного канала по построению выше лимита.
+    # Лимит задан на среднюю цену конверсии по плану в целом: отдельный канал может быть дороже,
+    # если план в среднем укладывается; остановка происходит на порции, которая подняла бы среднюю
     assert p.total_budget_rub / p.total_kpi <= 500.0
-    for a in p.allocations:
-        if a.budget_rub > 0 and a.cpa_rub:
-            assert a.cpa_rub <= 500.0
+    assert any("средняя цена" in step for step in p.explanation)
 
 
 def test_allocation_stable_under_finer_steps(catalog, curves, demo_brief):
@@ -106,3 +104,31 @@ def test_allocation_stable_under_finer_steps(catalog, curves, demo_brief):
     fine = allocate(build_models(ctx.curves, 21, pools, fatigue_delta(), grid_size=320), 1_200_000, "conversions", steps=2000)
     for cid in coarse.budgets:
         assert abs(coarse.budgets[cid] - fine.budgets[cid]) <= 0.02 * 1_200_000, cid
+
+
+def test_max_cpa_is_an_average_cap(catalog, curves, demo_brief):
+    """Лимит задан на среднюю цену конверсии по плану: наливаем, пока средняя не упёрлась в лимит,
+    поэтому при лимите 500 ₽ размещается заметно больше, чем при остановке по предельной цене."""
+    capped = demo_brief.model_copy(update={"max_cpa_rub": 500.0})
+    p = plan(capped, catalog, curves)
+    assert p.total_budget_rub / p.total_kpi <= 500.0 * 1.01
+    assert p.total_budget_rub >= 0.6 * demo_brief.budget_rub
+
+
+def test_kpi_does_not_fall_with_huge_budget(catalog, curves, demo_brief):
+    """Бюджет много больше ёмкости: размещается вся ёмкость, а не пустой план."""
+    small = plan(demo_brief.model_copy(update={"budget_rub": 5_000_000.0}), catalog, curves)
+    huge = plan(demo_brief.model_copy(update={"budget_rub": 1_000_000_000.0}), catalog, curves)
+    assert huge.total_kpi >= small.total_kpi * 0.99
+    assert huge.total_budget_rub >= small.total_budget_rub * 0.99
+
+
+def test_brief_rejects_duplicates_and_overlock(demo_brief):
+    import pytest
+
+    with pytest.raises(ValueError):
+        demo_brief.model_copy(update={"channel_ids": ["sms", "sms"]}).model_validate(
+            demo_brief.model_copy(update={"channel_ids": ["sms", "sms"]}).model_dump()
+        )
+    with pytest.raises(ValueError):
+        Brief.model_validate({**demo_brief.model_dump(), "locked": {"sms": 900_000.0, "social_1": 500_000.0}})
