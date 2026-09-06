@@ -16,6 +16,7 @@ import numpy as np
 from brain.curves import ResponseCurve
 from brain.executor import BaseExecutor, make_executor
 from brain.executor.controller import kpi_of_observation, spend_by_channel
+from brain.ml import MLBundle
 from contracts import (
     Action,
     HourRecord,
@@ -25,7 +26,9 @@ from contracts import (
     SeedBundle,
     ShockEvent,
 )
+from contracts.ml import MLConfig
 from harness.metrics import coefficient_of_variation, final_deviation, mape, unsmoothness, wape
+from world.settings import WorldSettings
 from world.simulator import Simulator
 
 
@@ -39,6 +42,8 @@ class RunConfig:
     stop_at_first_event: bool = False
     hold_plan: bool = True  # adaptive: держать план (резерв) или выжимать максимум KPI
     approved_hours: tuple[int, ...] = ()  # ходы выше лимита, одобренные человеком (по часу карточки)
+    world_settings: WorldSettings | None = None
+    ml: MLConfig = field(default_factory=MLConfig)
 
 
 def run_campaign(
@@ -47,11 +52,16 @@ def run_campaign(
     curves: dict[str, ResponseCurve],
     config: RunConfig,
     simulator: Simulator | None = None,
+    ml_bundle: MLBundle | None = None,
 ) -> RunSummary:
     if not plan.is_feasible:
         raise ValueError("нельзя прогнать недостижимый план")
     started = time.perf_counter()
-    sim = simulator or Simulator(catalog)
+    if plan.catalog_id != catalog.catalog_id or plan.brief.targeting != catalog.targeting:
+        raise ValueError("для исполнения требуется каталог выбранного сегмента, использованный в плане")
+    if simulator is not None and config.world_settings is not None and simulator.settings != config.world_settings:
+        raise ValueError("настройки переданного симулятора расходятся с RunConfig")
+    sim = simulator or Simulator(catalog, settings=config.world_settings)
     horizon = len(plan.trajectory)
     total_budget = plan.total_budget_rub
     channel_ids = [a.channel_id for a in plan.allocations]
@@ -64,9 +74,11 @@ def run_campaign(
         if config.strategy == "adaptive"
         else {}
     )
-    executor: BaseExecutor = make_executor(config.strategy, plan, catalog, curves, total_budget, **kwargs)
+    executor: BaseExecutor = make_executor(config.strategy, plan, catalog, curves, total_budget,
+                                          ml_config=config.ml, ml_bundle=ml_bundle, **kwargs)
 
-    sim.reset(config.seeds, config.scenario_id, horizon_hours=horizon, total_budget=total_budget, channel_ids=channel_ids)
+    sim.reset(config.seeds, config.scenario_id, horizon_hours=horizon, total_budget=total_budget, channel_ids=channel_ids,
+              targeting=plan.brief.targeting)
     for event in config.injected:
         sim.inject_shock(event)
 
@@ -85,6 +97,7 @@ def run_campaign(
 
     for h in range(horizon):
         decision = executor.decide(sim.remaining_budget)
+        forecast = executor.forecast(decision.action)
         obs, _, _, _ = sim.step(Action(spend_caps=decision.action))
         events = executor.observe(obs)
         cum_spend += obs.total_spend
@@ -94,6 +107,8 @@ def run_campaign(
         records.append(
             HourRecord(
                 hour=h + 1,
+                ml_forecast=forecast,
+                ml_signals=dict(executor.ml_signals),
                 plan_cum_spend=float(plan_spend[h]),
                 plan_cum_kpi=float(plan_kpi[h]),
                 fact_cum_spend=cum_spend,
@@ -108,10 +123,13 @@ def run_campaign(
                         "conversions": ch.conversions,
                         "spend": ch.spend,
                         "ecpm": ch.ecpm,
+                        "fraud_share": ch.fraud_share,
+                        "verified_impressions": ch.verified_impressions,
                     }
                     for cid, ch in obs.by_channel.items()
                 },
                 caps=decision.action,
+                deduplicated_reach=obs.total_reach,
                 status=decision.status,
                 events=events,
                 tracking_error_spend=decision.tracking_error_spend,
@@ -126,6 +144,8 @@ def run_campaign(
     shock_hours = sorted({e.start_hour for e in config.injected})
     return RunSummary(
         strategy=config.strategy,
+        ml=config.ml,
+        ml_model_id=ml_bundle.model_id if config.ml.enabled else None,
         scenario_id=config.scenario_id,
         world_seed=config.seeds.world_seed,
         noise_seed=config.seeds.noise_seed,

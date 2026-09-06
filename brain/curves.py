@@ -46,6 +46,16 @@ class ResponseCurve:
     max_daily_spend: float
     max_daily_impressions: float
     uncertainty: float = field(default=0.2)
+    learned_rates: bool = False
+
+    def rates_at(self, daily_spend: float) -> tuple[float, float]:
+        if not self.learned_rates:
+            return self.ctr, self.cvr
+        xs = [p.daily_spend for p in self.points]
+        imps = self.impressions_at(daily_spend)
+        clicks = float(np.interp(daily_spend, xs, [p.clicks for p in self.points]))
+        conv = float(np.interp(daily_spend, xs, [p.conversions for p in self.points]))
+        return (min(clicks / imps, 1) if imps else 0, min(conv / clicks, 1) if clicks else 0)
 
     def impressions_at(self, daily_spend: float) -> float:
         spend = min(max(daily_spend, 0.0), self.max_daily_spend)
