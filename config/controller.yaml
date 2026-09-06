@@ -19,16 +19,29 @@ planner:
     status: calibrated
     test: "tests/test_planner.py::test_allocation_stable_under_finer_steps"
     note: "точек сетки функции «бюджет → результат» канала"
+  type_b_bisection_steps:
+    value: 300
+    status: numerical
+    note: "порций жадного наливания внутри бисекции по бюджету (тип B и диагноз): грубее основной сетки ради скорости, результат проверяется test_allocation_stable_under_finer_steps"
+  budget_bisection_iterations:
+    value: 40
+    status: numerical
+    note: "итераций бисекции минимального бюджета под цель: точность бюджета 2^-40 от ёмкости"
+  max_horizon_days:
+    value: 90
+    status: sourced
+    source_url: "contracts/brief.py"
+    note: "верхняя граница горизонта брифа из контракта (Field le=90); диагноз недостижимости ищет срок до неё"
+  reachable_target_margin:
+    value: 0.95
+    status: calibrated
+    test: "tests/test_planner.py::test_type_b_diagnoses_binding_constraint"
+    note: "ход «снизить цель» предлагает 95 % достижимого максимума, чтобы цель не висела ровно на потолке ёмкости"
   corridor_sigma_divisor:
     value: 1.2816
     status: sourced
     source_url: "https://en.wikipedia.org/wiki/Standard_normal_table"
     note: "диапазон каталога трактуем как P10–P90; z(0.90) = 1.2816, коридор ±1σ"
-  economics_tail_multiplier:
-    value: 3.0
-    status: calibrated
-    test: "tests/test_planner.py::test_type_b_diagnoses_binding_constraint"
-    note: "хвост кривой дороже бенчмарка в разы = связывает экономика, а не ёмкость"
 
 curves:
   saturation_tolerance:
@@ -53,6 +66,20 @@ retro:
     status: calibrated
     test: "tests/test_curves.py::test_curve_saturates_where_cap_stops_binding"
     note: "лестница дневных лимитов как доли верхней оценки расхода канала; верхние уровни заведомо выше потолка"
+  sms_capacity_multiplier:
+    value: 1.5
+    status: calibrated
+    test: "tests/test_curves.py::test_curve_saturates_where_cap_stops_binding"
+    note: "верхняя оценка дневного расхода SMS для лестницы лимитов: база / период охлаждения × цена × 1,5, чтобы верхние уровни заведомо превышали потолок"
+  ladder_start_share:
+    value: 0.15
+    status: calibrated
+    test: "tests/test_curves.py::test_curve_saturates_where_cap_stops_binding"
+    note: "первый уровень лестницы как доля верхней оценки дневного расхода канала"
+  episode_budget_margin:
+    value: 1.01
+    status: numerical
+    note: "общий бюджет ретро-эпизода на 1 % выше суммы лимитов, чтобы общий бюджет не связывал раньше лимитов каналов"
   world_seeds:
     value: [1001, 1002, 1003]
     status: calibrated
@@ -126,6 +153,11 @@ detector:
     test: "tests/test_executor.py::test_detector_silent_without_shock"
     note: "падение отдачи по конверсиям должно держаться сутки: событий мало, подтверждение длиннее, чем по кликам"
 
+  ecpm_ewma_alpha:
+    value: 0.2
+    status: sourced
+    source_url: "https://www.itl.nist.gov/div898/handbook/pmc/section3/pmc324.htm"
+    note: "EWMA цены за тысячу показов; NIST/SEMATECH 6.3.2.4: λ от 0,2 до 0,3 по Hunter (1986)"
 controller:
   dead_zone:
     value: 0.03
@@ -157,6 +189,25 @@ controller:
     status: calibrated
     test: "tests/test_executor.py::test_status_follows_case_threshold"
     note: "порог приёмки кейса: отклонение в конце не более 20 %. Статус «пожар» с порога или при активном детекторе, «наблюдаем» с половины порога; раньше полоса статуса равнялась коридору ±35 % и −25 % по KPI показывалось как «в норме»"
+  reserve_elasticity:
+    value: 1.0
+    status: calibrated
+    test: "tests/test_executor.py::test_reserve_accounts_for_concavity"
+    note: "эластичность KPI остатка по расходу в уравнении резерва. Модельная оценка по жадному распределению даёт 0,2–0,4 из-за плоских участков огибающей у потолка и завышает резерв; фактическая граница на стенде (мир 2: −43 % расхода против −36 п.п. KPI) близка к линейной, поэтому 1,0"
+  reserve_bisection_steps:
+    value: 20
+    status: calibrated
+    test: "tests/test_executor.py::test_reserve_accounts_for_concavity"
+    note: "итераций бисекции доли резерва по уравнению r(1 − s)^e = 1 + s; численное разрешение 1e-6, на результат не влияет"
+  pool_floor_share:
+    value: 0.1
+    status: calibrated
+    test: "tests/test_executor.py::test_adaptive_beats_static_without_shock"
+    note: "пул новых уникальных при перерешении не меньше 10 % полного пула: иначе канал с почти выбранным охватом получает нулевую отдачу и выпадает из распределения"
+  share_floor:
+    value: 0.01
+    status: numerical
+    note: "к верхней границе доли добавляется 1 %, чтобы канал с нулевой долей на начало суток мог получить деньги (иначе лимит ±30 % от нуля равен нулю)"
   share_rate_limit:
     value: 0.30
     status: sourced

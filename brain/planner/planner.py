@@ -14,9 +14,16 @@ from dataclasses import dataclass
 import numpy as np
 
 from brain.assumptions import campaign_audience_multiplier, fatigue_delta, video_vtr
-from brain.config import CORRIDOR_SIGMA_DIVISOR
+from brain.config import (
+    BUDGET_BISECTION_ITERATIONS,
+    CORRIDOR_SIGMA_DIVISOR,
+    MAX_HORIZON_DAYS,
+    REACHABLE_TARGET_MARGIN,
+    TYPE_B_BISECTION_STEPS,
+)
 from brain.curves import ResponseCurve
 from brain.planner.allocator import AllocationResult, ChannelModel, allocate, build_models
+from brain.texts import kpi_label, num
 from contracts import (
     BindingConstraint,
     Brief,
@@ -81,7 +88,7 @@ def plan(brief: Brief, catalog: PublicCatalog, curves: dict[str, ResponseCurve])
 
 
 def _total_kpi(models: dict[str, ChannelModel], budget: float, kpi: str, locked, max_cpa) -> float:
-    result = allocate(models, budget, kpi, locked, max_cpa, steps=300)
+    result = allocate(models, budget, kpi, locked, max_cpa, steps=TYPE_B_BISECTION_STEPS)
     return sum(models[cid].value(b, kpi) for cid, b in result.budgets.items())
 
 
@@ -91,7 +98,7 @@ def _max_budget(models: dict[str, ChannelModel]) -> float:
 
 def _min_budget_for(models, target: float, kpi: str, locked, max_cpa) -> float:
     lo, hi = 0.0, _max_budget(models)
-    for _ in range(40):
+    for _ in range(BUDGET_BISECTION_ITERATIONS):
         mid = (lo + hi) / 2
         if _total_kpi(models, mid, kpi, locked, max_cpa) >= target:
             hi = mid
@@ -110,7 +117,7 @@ def _diagnose(brief: Brief, catalog: PublicCatalog, ctx: PlanningContext, models
     suggestions: list[BriefSuggestion] = []
     # 1. увеличить срок: минимальный горизонт, при котором цель достижима
     min_days = None
-    for days in range(brief.horizon_days + 1, 91):
+    for days in range(brief.horizon_days + 1, MAX_HORIZON_DAYS + 1):
         m = ctx.models(days)
         if _total_kpi(m, _max_budget(m), kpi, brief.locked, brief.max_cpa_rub) >= target:
             min_days = days
@@ -126,11 +133,11 @@ def _diagnose(brief: Brief, catalog: PublicCatalog, ctx: PlanningContext, models
             )
             break
     # 2. снизить цель до достижимого максимума с запасом 5 %
-    reachable = max_kpi * 0.95
+    reachable = max_kpi * REACHABLE_TARGET_MARGIN
     budget_for_reachable = _min_budget_for(models, reachable, kpi, brief.locked, brief.max_cpa_rub)
     suggestions.append(
         BriefSuggestion(
-            description=f"Снизить цель до {reachable:,.0f} {kpi} при тех же каналах и сроке",
+            description=f"Снизить цель до {num(reachable)} {kpi_label(kpi)} при тех же каналах и сроке",
             changed_field="target_value",
             suggested_value=float(round(reachable)),
             expected_kpi=float(reachable),
@@ -157,7 +164,7 @@ def _diagnose(brief: Brief, catalog: PublicCatalog, ctx: PlanningContext, models
             constraint = BindingConstraint.CHANNEL_SET
             explanation = (
                 f"При выбранных каналах максимум за {brief.horizon_days} дней "
-                f"{max_kpi:,.0f} {kpi}; с добавлением {', '.join(extra)} цель достижима."
+                f"{num(max_kpi)} {kpi_label(kpi)}; с добавлением {', '.join(extra)} цель достижима."
             )
             return Infeasibility(
                 binding_constraint=constraint, explanation=explanation, max_achievable=max_kpi, suggestions=suggestions
@@ -167,12 +174,12 @@ def _diagnose(brief: Brief, catalog: PublicCatalog, ctx: PlanningContext, models
         constraint = BindingConstraint.HORIZON
         explanation = (
             f"Ёмкости каналов хватает, но не за {brief.horizon_days} дней: потолок "
-            f"{max_kpi:,.0f} {kpi}; цель достижима минимум за {min_days} дней."
+            f"{num(max_kpi)} {kpi_label(kpi)}; цель достижима минимум за {min_days} дней."
         )
     else:
         constraint = BindingConstraint.CAPACITY
         explanation = (
-            f"Суммарная ёмкость выбранных каналов даёт не более {max_kpi:,.0f} {kpi} "
+            f"Суммарная ёмкость выбранных каналов даёт не более {num(max_kpi)} {kpi_label(kpi)} "
             f"даже при максимальном выкупе; цель {target:,.0f} недостижима."
         )
     return Infeasibility(

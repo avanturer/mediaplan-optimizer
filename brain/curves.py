@@ -13,7 +13,7 @@
    перестаёт расти с лимитом, кривая заканчивается; за неё не экстраполируем.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -45,7 +45,7 @@ class ResponseCurve:
     reach_per_impression: float  # доля новых уникальных на показ при малой частоте
     max_daily_spend: float
     max_daily_impressions: float
-    uncertainty: float = field(default=0.2)
+    uncertainty: float  # относительная полуширина диапазонов каталога, задаётся всегда
 
     def impressions_at(self, daily_spend: float) -> float:
         spend = min(max(daily_spend, 0.0), self.max_daily_spend)
@@ -144,8 +144,8 @@ def _concave_hull(points: list[CurvePoint]) -> list[CurvePoint]:
 
 def build_curve(history: RetroHistory, channel: CatalogChannel) -> ResponseCurve:
     raw = _daily_aggregates(history, channel.channel_id)
-    if not raw:
-        raise ValueError(f"в ретро-истории нет данных по каналу {channel.channel_id}")
+    if not raw or sum(p.impressions for p in raw) <= 0:
+        raise ValueError(f"в ретро-истории нет показов по каналу {channel.channel_id}")
 
     # Потолок: первая точка, где расход заметно ниже лимита, значит лимит не связывал.
     saturated = [p for p in raw if p.daily_spend < SATURATION_TOLERANCE * p.__dict__["cap_per_day"]]
@@ -186,7 +186,7 @@ def build_curve(history: RetroHistory, channel: CatalogChannel) -> ResponseCurve
         ctr=float(min(max(ctr, 0.0), 1.0)),
         cvr=float(min(max(cvr, 0.0), 1.0)),
         hourly_profile=_hourly_profile(history, channel.channel_id),
-        reach_per_impression=float(total_reach / total_imps) if total_imps else 0.5,
+        reach_per_impression=float(total_reach / total_imps),
         max_daily_spend=float(max_spend),
         max_daily_impressions=float(max_imps),
         uncertainty=channel.relative_uncertainty,

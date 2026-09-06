@@ -37,6 +37,7 @@ from brain.config import (
     PID_KD,
     PID_KI,
     PID_KP,
+    POOL_FLOOR_SHARE,
     PRIOR_CLICKS,
     PRIOR_IMPRESSIONS,
     PROBE_SHARE,
@@ -45,14 +46,19 @@ from brain.config import (
     REPLAN_GRID_SIZE,
     REPLAN_STEPS,
     REPLAN_WARMUP_HOURS,
+    RESERVE_BISECTION_STEPS,
+    RESERVE_ELASTICITY,
     RESERVE_STEP_SHARE,
     RESERVE_WARMUP_SHARE,
+    SATURATION_TOLERANCE,
+    SHARE_FLOOR,
     SHARE_RATE_LIMIT,
 )
 from brain.curves import CurvePoint, ResponseCurve
 from brain.executor.estimator import ChannelEstimate, RateEstimator
 from brain.planner.allocator import allocate as greedy_allocate
 from brain.planner.allocator import build_models
+from brain.texts import kpi_label, num
 from contracts import (
     ChannelDecision,
     ChannelStatus,
@@ -356,6 +362,7 @@ class AdaptiveExecutor(BaseExecutor):
     last_card_hour: dict[str, int] = field(default_factory=dict)
     anchor_hour: int = -HOURS_IN_WEEK
     hold_plan: bool = True  # False = выжимать максимум KPI, резерв не используется
+    reserve_balance: float = 1.0  # 1 = недорасход равен перевыполнению (метрика кейса); 0 = держать KPI ровно на плане
     lam: float = 1.0  # множитель темпа по расходу
     reserve_rub: float = 0.0  # бюджет, который решено не тратить: план по KPI и так выполняется
     target_budget: dict[str, float] = field(default_factory=dict)  # бюджет канала на всю кампанию после перерешений
@@ -468,7 +475,7 @@ class AdaptiveExecutor(BaseExecutor):
         pools = {}
         for cid in self.channel_ids:
             total_pool = self.catalog.by_id(cid).capacity_mid * campaign_audience_multiplier()
-            pools[cid] = max(total_pool - self.estimates[cid].cum_reach, total_pool * 0.1)
+            pools[cid] = max(total_pool - self.estimates[cid].cum_reach, total_pool * POOL_FLOOR_SHARE)
         models = build_models(curves, days_left, pools, fatigue_delta(), grid_size=REPLAN_GRID_SIZE)
         old_left = {cid: max(self.target_budget[cid] - self.fact_cum_by_channel[cid], 0.0) for cid in self.channel_ids}
         if self.hold_plan and h >= RESERVE_WARMUP_SHARE * self.horizon:
@@ -512,7 +519,7 @@ class AdaptiveExecutor(BaseExecutor):
                 continue
             old_share = self.share_anchor.get(cid, old_left[cid] / total_old if total_old > 0 else 0.0)
             new_share = new_left[cid] / remaining_budget if remaining_budget > 0 else 0.0
-            lo, hi = old_share * (1 - SHARE_RATE_LIMIT), old_share * (1 + SHARE_RATE_LIMIT) + 0.01
+            lo, hi = old_share * (1 - SHARE_RATE_LIMIT), old_share * (1 + SHARE_RATE_LIMIT) + SHARE_FLOOR
             if self.estimates[cid].shock_active:
                 lo = 0.0  # сломанный канал урезается сразу: плавность нужна для шума, а не для слома
             new_left[cid] = min(max(new_share, lo), hi) * remaining_budget
@@ -538,24 +545,57 @@ class AdaptiveExecutor(BaseExecutor):
 
         Кейс просит удерживать факт на траектории плана, а не максимизировать KPI
         любой ценой, и меряет отклонение по расходу и по KPI с равным весом.
-        Опережение оценивается по факту, а не по прогнозу модели: r = факт / план
-        накопительно к текущему часу. Если остаток тратить по плану, KPI к концу
-        превысит план примерно в r раз; доля резерва s выбирается так, чтобы
-        относительный недорасход равнялся относительному перевыполнению:
-        r(1 − s) − 1 = s, откуда s = (r − 1) / (r + 1). Сумма двух отклонений
-        при этом минимальна.
+        Опережение оценивается по факту: r = факт / план накопительно к текущему
+        часу, и предполагается, что остаток плана по KPI придёт с тем же
+        опережением. Доля резерва s выбирается так, чтобы относительный недорасход
+        в конце равнялся относительному перевыполнению в конце:
+        u(s) = s·R / B, o(s) = (факт + r·план_остатка·(1 − s)^e) / план_всего − 1,
+        где R остаток бюджета, B бюджет плана, e локальная эластичность KPI по
+        расходу из модели (1 при линейном отклике; кривые вогнуты, e < 1, и
+        урезание расхода бьёт по KPI слабее). Прежняя формула s = (r − 1)/(r + 1)
+        считала всё в долях остатка и не учитывала уже накопленное перевыполнение,
+        поэтому в щедрых мирах резерв рос быстрее, чем гасил перевыполнение
+        (мир 2 стенда: −33 % по расходу при +13 % по KPI; запись 34).
         """
         _, plan_total = self._plan_cum(self.horizon)
         _, plan_to_date = self._plan_cum(self.hour)
-        if plan_total - self.fact_cum_kpi <= 0:
-            return 0.0
-        if plan_to_date <= 0 or self.fact_cum_kpi <= 0:
+        if plan_to_date <= 0 or self.fact_cum_kpi <= 0 or plan_total <= 0:
             return remaining_budget
         ratio = self.fact_cum_kpi / plan_to_date
-        if ratio <= 1 + DEAD_ZONE:
+        if ratio <= 1 + DEAD_ZONE and self.fact_cum_kpi < plan_total:
             return remaining_budget
-        share = (ratio - 1) / (ratio + 1)
-        return remaining_budget * (1 - share)
+        plan_left = max(plan_total - plan_to_date, 0.0)
+        budget_total = self.plan.total_budget_rub or remaining_budget
+        elasticity = RESERVE_ELASTICITY
+
+        def overshoot(s: float) -> float:
+            return (self.fact_cum_kpi + ratio * plan_left * (1 - s) ** elasticity) / plan_total - 1
+
+        if overshoot(0.0) <= 0:
+            return remaining_budget
+        # reserve_balance = 1: перевыполнение равно недорасходу (оба отклонения кейса равны);
+        # reserve_balance = 0: ожидаемое перевыполнение ноль, весь запас возвращается рекламодателю
+        lo, hi = 0.0, 1.0
+        for _ in range(RESERVE_BISECTION_STEPS):
+            mid = (lo + hi) / 2
+            if overshoot(mid) > self.reserve_balance * mid * remaining_budget / budget_total:
+                lo = mid
+            else:
+                hi = mid
+        return remaining_budget * (1 - (lo + hi) / 2)
+
+    def _remaining_elasticity(self, models, remaining_budget: float) -> float:
+        """Локальная эластичность KPI остатка по расходу: log-отношение модельного KPI при полном
+        остатке и при остатке, урезанном на шаг резерва. Единица означает линейный отклик."""
+        full = greedy_allocate(models, remaining_budget, self.kpi, steps=REPLAN_STEPS)
+        cut_budget = remaining_budget * (1 - RESERVE_STEP_SHARE)
+        cut = greedy_allocate(models, cut_budget, self.kpi, steps=REPLAN_STEPS)
+        kpi_full = sum(models[cid].value(b, self.kpi) for cid, b in full.budgets.items())
+        kpi_cut = sum(models[cid].value(b, self.kpi) for cid, b in cut.budgets.items())
+        if kpi_full <= 0 or kpi_cut <= 0 or cut_budget <= 0:
+            return 1.0
+        e = math.log(kpi_full / kpi_cut) / math.log(remaining_budget / cut_budget)
+        return min(max(e, 0.0), 1.0)  # отклик не круче линейного: кривые вогнуты по построению
 
     def _emit_hold_cards(self, h: int, deltas: dict, models, old_left: dict, remaining_budget: float) -> None:
         """Слом есть, а переноса нет: человек всё равно должен увидеть карточку с объяснением.
@@ -572,7 +612,7 @@ class AdaptiveExecutor(BaseExecutor):
             if cid in self.hold_cards or deltas.get(cid, 0.0) < 0 or cid in self.unavailable:
                 continue
             self.hold_cards.add(cid)
-            saturated = [c for c in self.channel_ids if c != cid and old_left.get(c, 0.0) >= models[c].max_budget * 0.97]
+            saturated = [c for c in self.channel_ids if c != cid and old_left.get(c, 0.0) >= models[c].max_budget * SATURATION_TOLERANCE]
             if est.last_event == "rise":
                 cause, kind = f"клики {cid} выросли при прежней цене и без роста конверсий: похоже на фрод, детектор в час {self.detection_hours.get(cid, h)}", "rise"
                 decision = "деньги в канал не добавляем, пока рост не подтвердится конверсиями"
@@ -610,9 +650,10 @@ class AdaptiveExecutor(BaseExecutor):
         cpa_new = remaining_budget / kpi_new if kpi_new > 0 else None
         cpa_delta = ((cpa_new - cpa_old) / cpa_old * 100) if cpa_old and cpa_new else None
         _, plan_kpi_total = self._plan_cum(self.horizon)
-        plan_left = max(plan_kpi_total - self.fact_cum_kpi, 0.0)
-        # цена бездействия: недобор к концу кампании в долях всего плана, а не остатка
-        shortfall_abs = max(plan_left - kpi_old, 0.0)
+        # цена бездействия это эффект самого хода: сколько KPI к концу даёт новое распределение
+        # остатка против старого, в единицах KPI и в долях всего плана (ревью 06.09: раньше
+        # здесь стоял недобор всего плана, и перенос на 6 ₽ «стоил» 26 % плана)
+        shortfall_abs = max(kpi_new - kpi_old, 0.0)
         shortfall = (shortfall_abs / plan_kpi_total * 100) if plan_kpi_total > 0 else None
         limit = self.plan.brief.automation_limit_rub
 
@@ -635,13 +676,20 @@ class AdaptiveExecutor(BaseExecutor):
             if h in self.rejected_hours:
                 applied_by = "rejected"
             elif limit is not None and amount > limit:
-                self.human_requests += 1
                 if self.auto_apply_above_limit:
                     applied_by = "system"
                 elif h in self.approved_hours:
                     applied_by = "human"
                 else:
                     applied_by = "pending"
+            if applied_by == "pending" and donor in self.frozen_donors:
+                # по этому донору карточка уже ждёт решения: не переиздаём её каждое перерешение
+                # (пауза канала без автоприменения давала 13 одинаковых карточек), деньги остаются
+                new_left[taker] -= amount
+                new_left[donor] += amount
+                continue
+            if applied_by in ("pending", "human"):
+                self.human_requests += 1
             if applied_by == "system" and not forced:
                 # перенос по факту применяется сразу, а карточка о нём копится: не чаще раза в
                 # сутки на канал и не мельче порога, иначе человек читает один перенос по частям
@@ -660,9 +708,9 @@ class AdaptiveExecutor(BaseExecutor):
                     cause=cause,
                     cost_of_decision=(f"CPA на остатке изменится на {cpa_delta:+.1f} %" if cpa_delta is not None else "CPA не оценён"),
                     cost_of_inaction=(
-                        f"без хода недоберём {shortfall:.0f} % {self.kpi} к концу"
-                        if shortfall is not None and shortfall > 0
-                        else "без хода план выполняется; ход экономит бюджет"
+                        f"без хода недоберём {num(shortfall_abs)} {kpi_label(self.kpi)} к концу ({shortfall:.1f} % плана)"
+                        if shortfall is not None and shortfall_abs >= 1
+                        else "без хода KPI к концу тот же; ход экономит бюджет или снижает CPA"
                     ),
                     cpa_delta_pct=cpa_delta,
                     inaction_kpi_shortfall_pct=shortfall,

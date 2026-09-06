@@ -45,6 +45,7 @@ from brain.config import (
     DETECTOR_RISE_THRESHOLD,
     DETECTOR_WINDOW_HOURS,
     DETECTOR_Z_THRESHOLD,
+    ECPM_EWMA_ALPHA,
     SHOCK_STATUS_HOURS,
 )
 
@@ -220,7 +221,7 @@ class ChannelEstimate:
     suspicious: bool = False  # рост CTR без подтверждения конверсиями: оценке CTR не верим вверх
     recent: deque = field(default_factory=deque)  # (показы, клики, конверсии) за последнее окно детектора
 
-    def observe(self, obs, kpi: str, hour: int, alpha: float = 0.2, rate_scale: float = 1.0) -> bool:
+    def observe(self, obs, kpi: str, hour: int, alpha: float = ECPM_EWMA_ALPHA, rate_scale: float = 1.0) -> bool:
         """Обновляет оценки часовым наблюдением; True, если сработал любой детектор."""
         if self.shock_active and self.shock_hour is not None and hour - self.shock_hour >= SHOCK_STATUS_HOURS:
             self.shock_active = False  # новый режим принят как норма, статус «пожар» снимается
