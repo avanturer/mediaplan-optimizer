@@ -221,6 +221,15 @@ def test_decide_approve_reruns_and_decline_after_approve_is_rejected(client):
     assert any(p["hour"] == pending[0] and p["applied_by"] == "human" for p in after["main"]["proposals"])
     r = client.post(f"/api/run/{after['run_id']}/decide", json={"hour": pending[0], "decision": "decline"})
     assert r.status_code == 422
+    # откат своего одобрения: карточка снова ждёт решения, итог возвращается к исходному
+    r = client.post(f"/api/run/{after['run_id']}/decide", json={"hour": pending[0], "decision": "undo"})
+    assert r.status_code == 200, r.text
+    undone = r.json()
+    assert undone["effect"]["hour"] == pending[0]
+    assert any(p["hour"] == pending[0] and p["applied_by"] == "pending" for p in undone["main"]["proposals"])
+    assert undone["verdict"]["actual_kpi"] == run["verdict"]["actual_kpi"]
+    r = client.post(f"/api/run/{undone['run_id']}/decide", json={"hour": pending[0], "decision": "undo"})
+    assert r.status_code == 422  # отменять уже нечего
 
 
 def test_static_strategy_twin_equals_main(client):
