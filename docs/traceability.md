@@ -6,20 +6,20 @@
 
 | Сценарий | Продуктовое решение | Где в коде | Что видит человек |
 |---|---|---|---|
-| С1 | бриф типа A, пресеты каналов | `app/main.py: PRESETS, /api/plan`, `brain/planner/planner.py` | форма брифа, кнопка «Демо 1» |
-| С1 | «цена следующей тысячи» как единственная величина, сравнивающая каналы | `brain/planner/allocator.py: marginal_cost_per_kpi` | столбец «Цена следующей конверсии» в таблице плана |
+| С1 | бриф типа A, пресеты каналов | `app/main.py: PRESETS, /api/plan`, `brain/planner/planner.py` | форма брифа, пример брифа в шапке |
+| С1 | «цена следующей тысячи» как единственная величина, сравнивающая каналы | `brain/planner/allocator.py: marginal_cost_per_kpi` | выделенный столбец «Цена следующей конверсии» третьим в таблице плана |
 | С1 | коридор вместо точки | `brain/planner/planner.py: corridor_rel`, `contracts/plan.py: band_*` | плитка «Надёжность плана», лента коридора на графике |
 | С1 | фиксация канала руками, остальные перераспределяются | `contracts/brief.py: locked`, `allocate(locked=...)` | поле `locked` брифа (API), замок в таблице |
 | С1 | план утверждается версией | `app/main.py: /api/plan/{id}/approve` | кнопка «Утвердить план», бейдж версии |
 | С1 | «что если бюджет ±10 %» | `app/static/index.html: whatIf` | таблица цены каждой добавленной единицы |
 | С2 | отказ с максимумом и тремя ходами, ход применяется одним нажатием | `brain/planner/planner.py: _diagnose`, `contracts/plan.py: Infeasibility` | карточки ходов с кнопкой «Применить и пересчитать» |
-| С3 | репетиция: прогон плана через шоки до запуска | `app/main.py: /api/stress`, `world/scenarios.py` | кнопка «Стресс-тест плана», таблица «выдерживает / уязвим» |
+| С3 | репетиция: прогон плана через шоки до запуска | `app/main.py: /api/stress`, `world/scenarios.py` | кнопка «Стресс-тест: прогнать план через шоки», таблица «выдерживает / уязвим» |
 | С3 | лимит полномочий автоматики сохраняется в плане | `contracts/brief.py: automation_limit_rub`, `AdaptiveExecutor._emit_proposals` | поле «Лимит автоматики за ход», карточки «ждёт решения» |
 | С4 | статус с явными порогами: в норме / наблюдаем / пожар | `BaseExecutor._status`, `contracts/execution.py: TrackingStatus` | крупный статус в плеере, лента смен режима |
 | С4 | таблица по каналам за час: запросы, показы, охват, клики, конверсии, расход, eCPM | `contracts/execution.py: HourRecord.fact_by_channel`, `harness/runner.py` | таблица «Каналы в этот час» |
 | С4 | «до следующего события», пауза, скорость | `RunSummary.hours[].events`, `index.html: nextEvent` | плеер прогона |
 | С5 | карточка предложения: причина, ход, цена решения, цена бездействия | `AdaptiveExecutor._emit_proposals`, `contracts/execution.py: Proposal` | карточки «Предложения и ходы автоматики» |
-| С5 | человек в контуре: одобрить или отклонить ход выше лимита, цена решения по факту | `app/main.py: /api/run/{id}/decide`, `AdaptiveExecutor.approved_hours`, `tests/test_executor.py::test_human_approval_*` | кнопки «Одобрить ход» и «Отклонить», баннер «цена решения по факту» |
+| С5 | человек в контуре: одобрить или отклонить ход выше лимита, цена решения по факту | `app/main.py: /api/run/{id}/decide`, `AdaptiveExecutor.approved_hours`, `tests/test_executor.py::test_human_approval_*` | кнопки «Перенести» и «Оставить как есть», баннер «цена решения по факту» |
 | С4 | сводка на текущий час: что произошло и что делать | `index.html: digest` | блок «Сводка на день N» под плитками |
 | С6 | граница применимости: при какой силе шока решение ломается | `app/main.py: /api/degradation` | кнопка «Где ломается решение», график и таблица |
 | С5 | откат применённого хода: перепрогон без него, донор заморожен | `harness/runner.py: RunConfig.rejected_hours`, `AdaptiveExecutor.rejected_hours`, `tests/test_executor.py::test_rejected_hours_revert_a_move` | кнопка «Откатить» в карточке (кабинет, ветка Георгия) |

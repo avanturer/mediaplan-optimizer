@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="MediaPlan Optimizer">
+  <!-- «Прорезь» в стиле Modernist: чернильный квадрат без скруглений, бумажная прорезь-коридор,
+       красная линия факта уходит вниз и возвращается к плану -->
+  <rect width="64" height="64" fill="#201e1d"/>
+  <path d="M6 42 L20 34 L34 30 L46 24 L58 18 L58 28 L46 34 L34 40 L20 44 L6 52 Z" fill="#f3f2f2"/>
+  <path d="M6 47 L20 39 L34 35 L40 32 L44 41 L52 27 L58 23" fill="none" stroke="#ec3013" stroke-width="4" stroke-linejoin="round" stroke-linecap="square"/>
+</svg>
