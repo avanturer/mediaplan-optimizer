@@ -131,7 +131,11 @@ def allocate(
     for cid, value in locked.items():
         budgets[cid] = min(value, models[cid].max_budget)
     free_budget = budget - sum(budgets.values())
-    eps = max(budget / steps, 1.0)
+    # порция от размещаемой суммы, а не от бюджета брифа: при бюджете много больше ёмкости
+    # порция переставала влезать в потолок любого канала и план выходил пустым
+    eps = max(min(budget, sum(m.max_budget for m in models.values())) / steps, 1.0)
+    spent = sum(budgets.values())
+    total_kpi = sum(models[cid].value(b, kpi) for cid, b in budgets.items())
     frozen: dict[str, str] = {cid: "зафиксирован вручную" for cid in locked}
     order: list[str] = []
     explanation: list[str] = []
@@ -146,18 +150,21 @@ def allocate(
                 frozen[cid] = "ёмкость исчерпана"
                 continue
             gain = model.value(b + eps, kpi) - model.value(b, kpi)
-            if max_cost_per_kpi is not None and gain > 0 and eps / gain > max_cost_per_kpi:
-                frozen[cid] = f"следующая порция дороже лимита ({eps / gain:,.0f} ₽ за единицу KPI)"
-                continue
             if gain > best_gain:
                 best_cid, best_gain = cid, gain
         if best_cid is None:
             break
+        if max_cost_per_kpi is not None and (spent + eps) / max(total_kpi + best_gain, 1e-9) > max_cost_per_kpi:
+            for cid in models:
+                frozen.setdefault(cid, f"средняя цена за единицу KPI достигла лимита {max_cost_per_kpi:,.0f} ₽")
+            break
+        spent += eps
+        total_kpi += best_gain
         if best_cid not in order:
             order.append(best_cid)
             explanation.append(
-                f"шаг {len(order)}: {best_cid} получает бюджет, предельная цена "
-                f"{eps / best_gain:,.0f} ₽ за единицу KPI"
+                f"шаг {len(order)}: {best_cid} получает бюджет, первая порция по "
+                f"{eps / best_gain:,.0f} ₽ за единицу KPI (цена последней порции в таблице плана)"
             )
         budgets[best_cid] += eps
         free_budget -= eps

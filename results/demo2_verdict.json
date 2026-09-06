@@ -11684,7 +11684,7 @@
           "expected_budget_rub": 1982017.0885961442
         },
         {
-          "description": "Снизить цель до 35,451 clicks в срок",
+          "description": "Снизить цель до 35,451 clicks при тех же каналах и сроке",
           "changed_field": "target_value",
           "suggested_value": 35451.0,
           "expected_kpi": 35450.93460898936,

@@ -19,16 +19,29 @@ planner:
     status: calibrated
     test: "tests/test_planner.py::test_allocation_stable_under_finer_steps"
     note: "точек сетки функции «бюджет → результат» канала"
+  type_b_bisection_steps:
+    value: 300
+    status: numerical
+    note: "порций жадного наливания внутри бисекции по бюджету (тип B и диагноз): грубее основной сетки ради скорости, результат проверяется test_allocation_stable_under_finer_steps"
+  budget_bisection_iterations:
+    value: 40
+    status: numerical
+    note: "итераций бисекции минимального бюджета под цель: точность бюджета 2^-40 от ёмкости"
+  max_horizon_days:
+    value: 90
+    status: sourced
+    source_url: "contracts/brief.py"
+    note: "верхняя граница горизонта брифа из контракта (Field le=90); диагноз недостижимости ищет срок до неё"
+  reachable_target_margin:
+    value: 0.95
+    status: calibrated
+    test: "tests/test_planner.py::test_type_b_diagnoses_binding_constraint"
+    note: "ход «снизить цель» предлагает 95 % достижимого максимума, чтобы цель не висела ровно на потолке ёмкости"
   corridor_sigma_divisor:
     value: 1.2816
     status: sourced
     source_url: "https://en.wikipedia.org/wiki/Standard_normal_table"
     note: "диапазон каталога трактуем как P10–P90; z(0.90) = 1.2816, коридор ±1σ"
-  economics_tail_multiplier:
-    value: 3.0
-    status: calibrated
-    test: "tests/test_planner.py::test_type_b_diagnoses_binding_constraint"
-    note: "хвост кривой дороже бенчмарка в разы = связывает экономика, а не ёмкость"
 
 curves:
   saturation_tolerance:
@@ -53,6 +66,20 @@ retro:
     status: calibrated
     test: "tests/test_curves.py::test_curve_saturates_where_cap_stops_binding"
     note: "лестница дневных лимитов как доли верхней оценки расхода канала; верхние уровни заведомо выше потолка"
+  sms_capacity_multiplier:
+    value: 1.5
+    status: calibrated
+    test: "tests/test_curves.py::test_curve_saturates_where_cap_stops_binding"
+    note: "верхняя оценка дневного расхода SMS для лестницы лимитов: база / период охлаждения × цена × 1,5, чтобы верхние уровни заведомо превышали потолок"
+  ladder_start_share:
+    value: 0.15
+    status: calibrated
+    test: "tests/test_curves.py::test_curve_saturates_where_cap_stops_binding"
+    note: "первый уровень лестницы как доля верхней оценки дневного расхода канала"
+  episode_budget_margin:
+    value: 1.01
+    status: numerical
+    note: "общий бюджет ретро-эпизода на 1 % выше суммы лимитов, чтобы общий бюджет не связывал раньше лимитов каналов"
   world_seeds:
     value: [1001, 1002, 1003]
     status: calibrated
@@ -90,17 +117,47 @@ detector:
     status: calibrated
     test: "tests/test_executor.py::test_detector_silent_without_shock"
     note: "падение должно держаться полсуток подряд, иначе один неудачный час или день считается шумом"
-  discount_on_shock:
-    value: 0.15
-    status: calibrated
-    test: "tests/test_executor.py::test_estimates_reset_after_shock"
-    note: "после срабатывания от накопленной статистики канала остаётся 15 %: оценка разворачивается за часы, а не за неделю"
   shock_status_hours:
     value: 24
     status: calibrated
     test: "tests/test_executor.py::test_detector_catches_ctr_drop"
     note: "сколько часов после срабатывания канал считается «в пожаре»; потом новый режим принят как норма"
+  rise_threshold:
+    value: 0.30
+    status: sourced
+    source_url: "https://improvado.io/blog/campaign-monitoring-and-anomaly-detection"
+    note: "скачок CTR (клики на показ) на 30 % и значимый на 3σ: аномалия в обе стороны; держатель кейса на чекпоинте 04.09 предложил тот же порог для роста CTR как признака фрода"
+  kpi_window_hours:
+    value: 72
+    status: calibrated
+    test: "tests/test_executor.py::test_kpi_detector_catches_cvr_drop"
+    note: "детектор по конверсиям на рубль: при ~13 конверсиях в сутки на канал трое суток дают ~40 событий, пуассоновский разброс ~16 %, порог 30 % это около 2σ"
+  kpi_baseline_hours:
+    value: 120
+    status: calibrated
+    test: "tests/test_executor.py::test_detector_silent_without_shock"
+    note: "база пять суток: достаточно конверсий и ещё не ушла усталость; первое возможное срабатывание на восьмые сутки"
+  z_threshold:
+    value: 3.0
+    status: sourced
+    source_url: "https://en.wikipedia.org/wiki/68%E2%80%9395%E2%80%9399.7_rule"
+    note: "оба детектора: падение или рост засчитываются, если доля событий окна значимо отличается от ожидаемой на 3σ (условный биномиальный тест двух пуассоновских счётчиков); порог в процентах задаёт величину эффекта, тест значимости отсекает шум, поэтому детектор сам подстраивается под волатильность мира"
+  min_expected_events:
+    value: 10
+    status: sourced
+    source_url: "https://en.wikipedia.org/wiki/Binomial_distribution#Normal_approximation"
+    note: "нормальное приближение биномиального теста допустимо при np ≥ 10 и n(1−p) ≥ 10 с каждой стороны; ниже детектор молчит"
+  kpi_confirm_hours:
+    value: 24
+    status: calibrated
+    test: "tests/test_executor.py::test_detector_silent_without_shock"
+    note: "падение отдачи по конверсиям должно держаться сутки: событий мало, подтверждение длиннее, чем по кликам"
 
+  ecpm_ewma_alpha:
+    value: 0.2
+    status: sourced
+    source_url: "https://www.itl.nist.gov/div898/handbook/pmc/section3/pmc324.htm"
+    note: "EWMA цены за тысячу показов; NIST/SEMATECH 6.3.2.4: λ от 0,2 до 0,3 по Hunter (1986)"
 controller:
   dead_zone:
     value: 0.03
@@ -122,11 +179,40 @@ controller:
     status: calibrated
     test: "tests/test_executor.py::test_full_run_is_fast"
     note: "перерешение раз в 6 часов и по событию: компромисс скорости и качества"
+  replan_warmup_hours:
+    value: 24
+    status: calibrated
+    test: "tests/test_executor.py::test_no_scheduled_replan_in_first_day"
+    note: "первые сутки исполнитель воспроизводит утверждённый план: шести ночных часов мало, чтобы переоптимизировать по приору (ревью 06.09: перенос 62 тыс. ₽ в SMS ночью и разворот через сутки); перерешение по событию (детектор, пауза) разрешено и в первые сутки; сутки как ритм лимита доли"
+  case_threshold:
+    value: 0.20
+    status: calibrated
+    test: "tests/test_executor.py::test_status_follows_case_threshold"
+    note: "порог приёмки кейса: отклонение в конце не более 20 %. Статус «пожар» с порога или при активном детекторе, «наблюдаем» с половины порога; раньше полоса статуса равнялась коридору ±35 % и −25 % по KPI показывалось как «в норме»"
+  reserve_elasticity:
+    value: 1.0
+    status: calibrated
+    test: "tests/test_executor.py::test_reserve_accounts_for_concavity"
+    note: "эластичность KPI остатка по расходу в уравнении резерва. Модельная оценка по жадному распределению даёт 0,2–0,4 из-за плоских участков огибающей у потолка и завышает резерв; фактическая граница на стенде (мир 2: −43 % расхода против −36 п.п. KPI) близка к линейной, поэтому 1,0"
+  reserve_bisection_steps:
+    value: 20
+    status: calibrated
+    test: "tests/test_executor.py::test_reserve_accounts_for_concavity"
+    note: "итераций бисекции доли резерва по уравнению r(1 − s)^e = 1 + s; численное разрешение 1e-6, на результат не влияет"
+  pool_floor_share:
+    value: 0.1
+    status: calibrated
+    test: "tests/test_executor.py::test_adaptive_beats_static_without_shock"
+    note: "пул новых уникальных при перерешении не меньше 10 % полного пула: иначе канал с почти выбранным охватом получает нулевую отдачу и выпадает из распределения"
+  share_floor:
+    value: 0.01
+    status: numerical
+    note: "к верхней границе доли добавляется 1 %, чтобы канал с нулевой долей на начало суток мог получить деньги (иначе лимит ±30 % от нуля равен нулю)"
   share_rate_limit:
     value: 0.30
     status: sourced
     source_url: "https://developers.google.com/meridian/docs/user-guide/budget-optimization-scenarios"
-    note: "Meridian: spend_constraint_lower/upper по умолчанию ±30 % от текущей доли канала"
+    note: "Meridian: spend_constraint_lower/upper по умолчанию ±30 % от текущей доли канала; у нас за сутки (доля на начало суток), а не за каждое перерешение"
   pause_after_hours:
     value: 3
     status: calibrated
@@ -150,11 +236,16 @@ controller:
     value: 300
     status: calibrated
     test: "tests/test_executor.py::test_full_run_is_fast"
-  reserve_warmup_hours:
-    value: 96
+  reserve_warmup_share:
+    value: 0.19
     status: calibrated
     test: "tests/test_executor.py::test_adaptive_beats_static_without_shock"
-    note: "резерв бюджета включается после четырёх суток: раньше опережение по KPI это шум первых дней, а не свойство мира"
+    note: "резерв включается после 19 % горизонта: 96 часов на кампании кейса в 21 день (там и калибровано); раньше опережение по KPI это шум первых дней, а не свойство мира; в семидневной кампании это 32 часа"
+  card_min_interval_hours:
+    value: 24
+    status: sourced
+    source_url: "https://developers.google.com/meridian/docs/user-guide/budget-optimization-scenarios"
+    note: "информационная карточка о переносе по факту не чаще раза в сутки на канал, с накоплением суммы: доля канала меняется в суточном ритме (лимит ±30 % за сутки), человек не должен читать один и тот же перенос по частям; карточки о сломе и выше лимита полномочий выдаются сразу"
   reserve_step_share:
     value: 0.05
     status: calibrated

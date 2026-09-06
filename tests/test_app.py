@@ -17,7 +17,7 @@ DEMO1 = {
     "budget_rub": 1_200_000,
     "horizon_days": 21,
     "objective": "max_conversions",
-    "automation_limit_rub": 100_000,
+    "automation_limit_rub": 50_000,  # с новым исполнителем переносы первого дня ниже 100 000, карточка ждёт решения при 50 000
 }
 DEMO2 = {"mode": "B", "preset": "narrow", "target_kpi": "clicks", "target_value": 50_000, "horizon_days": 14}
 SIX_METRICS = ("ctr", "cvr", "cpm_rub", "cpc_rub", "cpa_rub", "vtr")
@@ -213,7 +213,7 @@ def test_decide_approve_reruns_and_decline_after_approve_is_rejected(client):
     plan = _approved_plan(client, DEMO1)
     run = client.post("/api/run", json={"plan_id": plan["plan_id"], "scenario_id": "channel_pause"}).json()
     pending = [p["hour"] for p in run["main"]["proposals"] if p["applied_by"] == "pending"]
-    assert pending, "в демо-плане с лимитом 100 000 ₽ должна быть карточка, ждущая решения"
+    assert pending, "в демо-плане с лимитом 50 000 ₽ должна быть карточка, ждущая решения"
     r = client.post(f"/api/run/{run['run_id']}/decide", json={"hour": pending[0], "decision": "approve"})
     assert r.status_code == 200, r.text
     after = r.json()

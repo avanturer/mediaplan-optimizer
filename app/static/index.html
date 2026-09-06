@@ -51,7 +51,9 @@
   .field>label{display:block;font-size:12px;margin-bottom:5px;color:color-mix(in srgb,var(--color-text) 70%,transparent)}
   .input{width:100%;min-height:36px;padding:6px 10px;font:inherit;font-size:14px;color:var(--color-text);caret-color:var(--color-accent);background:var(--color-surface);border:1px solid var(--color-divider);border-radius:0}
   .input:hover{border-color:color-mix(in srgb,var(--color-text) 45%,transparent)} .input:focus-visible{border-color:var(--color-accent);outline-offset:0}
-  select.input{appearance:auto}
+  select.input{appearance:none;-webkit-appearance:none;padding-right:32px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23201e1d' stroke-width='1.6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
+  input[type=date].input{-webkit-appearance:none;appearance:none}
+  .input{height:36px;min-height:36px;line-height:22px}
   input[type=number]{-moz-appearance:textfield}
   .seg{display:inline-flex;overflow:hidden;border:1px solid var(--color-divider);border-radius:0;max-width:100%}
   .seg .btn{padding:6px 12px;font-family:var(--font-body);font-weight:400;font-size:13px;min-height:32px}
@@ -425,7 +427,7 @@ async function init() {
   $('#horizon').max = META.max_horizon_days || 30;
   renderShockChips();
   $('#btn-plan').onclick = () => makePlan();
-  $('#btn-demo1').onclick = () => { setMode('A'); setChannels(META.presets.all.channels); setMoney('budget', 1200000); $('#horizon').value=21; $('#objective').value='max_conversions'; $('#promise').value='median'; setMoney('max_cpa', ''); setMoney('auto_limit', 100000); syncCpa(); makePlan(); };
+  $('#btn-demo1').onclick = () => { setMode('A'); setChannels(META.presets.all.channels); setMoney('budget', 1200000); $('#horizon').value=21; $('#objective').value='max_conversions'; $('#promise').value='median'; setMoney('max_cpa', ''); setMoney('auto_limit', 50000); syncCpa(); makePlan(); };
   $('#btn-demo2').onclick = () => { setMode('B'); setChannels(META.presets.narrow.channels); $('#target_kpi').value='clicks'; setMoney('target_value', 50000); $('#horizon').value=14; $('#promise').value='median'; setMoney('max_cpa', ''); setMoney('auto_limit', ''); syncCpa(); makePlan(); };
   $('#btn-run').onclick = () => runCampaign();
   $('#btn-compare').onclick = () => compareStrategies();
