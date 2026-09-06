@@ -362,6 +362,7 @@ class AdaptiveExecutor(BaseExecutor):
     last_card_hour: dict[str, int] = field(default_factory=dict)
     anchor_hour: int = -HOURS_IN_WEEK
     hold_plan: bool = True  # False = выжимать максимум KPI, резерв не используется
+    reserve_balance: float = 1.0  # 1 = недорасход равен перевыполнению (метрика кейса); 0 = держать KPI ровно на плане
     lam: float = 1.0  # множитель темпа по расходу
     reserve_rub: float = 0.0  # бюджет, который решено не тратить: план по KPI и так выполняется
     target_budget: dict[str, float] = field(default_factory=dict)  # бюджет канала на всю кампанию после перерешений
@@ -572,10 +573,12 @@ class AdaptiveExecutor(BaseExecutor):
 
         if overshoot(0.0) <= 0:
             return remaining_budget
+        # reserve_balance = 1: перевыполнение равно недорасходу (оба отклонения кейса равны);
+        # reserve_balance = 0: ожидаемое перевыполнение ноль, весь запас возвращается рекламодателю
         lo, hi = 0.0, 1.0
         for _ in range(RESERVE_BISECTION_STEPS):
             mid = (lo + hi) / 2
-            if overshoot(mid) > mid * remaining_budget / budget_total:
+            if overshoot(mid) > self.reserve_balance * mid * remaining_budget / budget_total:
                 lo = mid
             else:
                 hi = mid

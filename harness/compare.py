@@ -67,13 +67,14 @@ def compare_strategies(
     catalog_seed: int = 0,
     first_seed: int = 1,
     hold_plan: bool = True,
+    reserve_balance: float = 1.0,
 ) -> dict[str, StrategyStats]:
     sim = Simulator(catalog)
     results: dict[str, list[RunSummary]] = {s: [] for s in strategies}
     for k in range(first_seed, first_seed + seeds):
         bundle = SeedBundle(catalog_seed=catalog_seed, world_seed=k, noise_seed=10_000 + k)
         for strategy in strategies:
-            config = RunConfig(strategy=strategy, scenario_id=scenario_id, seeds=bundle, injected=list(injected or []), hold_plan=hold_plan)
+            config = RunConfig(strategy=strategy, scenario_id=scenario_id, seeds=bundle, injected=list(injected or []), hold_plan=hold_plan, reserve_balance=reserve_balance)
             results[strategy].append(run_campaign(plan, catalog, curves, config, simulator=sim))
 
     stats: dict[str, StrategyStats] = {}
