@@ -163,8 +163,8 @@ def allocate(
         if best_cid not in order:
             order.append(best_cid)
             explanation.append(
-                f"шаг {len(order)}: {best_cid} получает бюджет, предельная цена "
-                f"{eps / best_gain:,.0f} ₽ за единицу KPI"
+                f"шаг {len(order)}: {best_cid} получает бюджет, первая порция по "
+                f"{eps / best_gain:,.0f} ₽ за единицу KPI (цена последней порции в таблице плана)"
             )
         budgets[best_cid] += eps
         free_budget -= eps

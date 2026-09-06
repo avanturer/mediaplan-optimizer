@@ -32,7 +32,9 @@ def test_controller_constants_have_provenance():
                 problems.append(f"{section}.{name}: sourced без source_url")
             elif status == "calibrated" and not entry.get("test"):
                 problems.append(f"{section}.{name}: calibrated без test")
-            elif status not in ("sourced", "calibrated"):
+            elif status == "numerical" and not entry.get("note"):
+                problems.append(f"{section}.{name}: numerical без note (что это разрешение, а не параметр)")
+            elif status not in ("sourced", "calibrated", "numerical"):
                 problems.append(f"{section}.{name}: нет статуса")
     assert not problems, "\n".join(problems)
 
