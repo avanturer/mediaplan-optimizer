@@ -1,8 +1,8 @@
 ---
 id: 0009
 title: Влить worktree feat/work-9548e8e3 (кабинет + develop) в feature/pm-cabinet-ux, запушить, затем PR #1 в develop
-state: doing
-owner: e6338d59-7965-4d62-b5e5-aeea685aaca4-be3040ba
+state: done
+owner: 
 branch: feature/pm-cabinet-ux
 paths: app/static/index.html, app/main.py, tests/test_app.py, README.md, docs/cabinet_changes.md, harness/compare.py, brain/executor/controller.py, results/report.md
 source: 
@@ -11,7 +11,7 @@ blocker:
 after: 
 with: 
 created_at: 2026-09-06T17:18:17Z
-updated_at: 2026-09-06T17:18:19Z
+updated_at: 2026-09-06T17:35:53Z
 ---
 
 (no detail)
