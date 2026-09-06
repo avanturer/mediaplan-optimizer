@@ -161,6 +161,7 @@
   .range{display:flex;align-items:center;gap:16px} input[type=range]{accent-color:var(--color-accent);width:100%}
   .digest-grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:32px;margin-top:24px}
   .digest-text{font-size:15px;line-height:1.5}
+  .kvs{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:14px;line-height:1.4;margin-top:4px} .kv{display:contents} .kv > span:first-child{color:var(--color-neutral-700);white-space:nowrap} .kv b{font-weight:600}
   .advice{padding:16px 20px;background:var(--color-surface);font-size:14px}
   .charts2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:32px;margin-top:32px}
   .chart{position:relative;height:260px;min-width:0}
@@ -171,7 +172,8 @@
   pre.explain{white-space:pre-wrap;font:12px/1.6 ui-monospace,monospace;background:var(--color-surface);padding:12px;max-height:220px;overflow:auto;margin:12px 0 8px}
   details.more{margin-top:16px;font-size:14px} details.more summary{cursor:pointer;font-weight:600}
   .statement{background:var(--color-surface);border-top:2px solid var(--color-text);padding:32px 36px;margin-bottom:32px}
-  .statement .big{font-family:var(--font-heading);font-weight:var(--font-heading-weight);font-size:clamp(22px,2.8vw,34px);line-height:1.18;letter-spacing:-.015em;max-width:980px;text-wrap:pretty}
+  .statement .big{font-family:var(--font-body);font-weight:400;font-size:clamp(19px,2.2vw,27px);line-height:1.32;max-width:980px;text-wrap:pretty}
+  .statement .big b{font-family:var(--font-heading);font-weight:800;letter-spacing:-.01em;white-space:nowrap}
   @media (min-width:1440px){main{max-width:1360px}.nav{padding-left:calc((100% - 1360px)/2 + 32px);padding-right:calc((100% - 1360px)/2 + 32px)}}
   @media (max-width:900px){.two,.digest-grid{grid-template-columns:1fr}h1{font-size:32px}main{padding:24px 16px 60px}.nav{padding:10px 16px}}
   @media (max-width:900px){.step .st{display:none}.step{width:auto;display:inline-flex}}
@@ -752,7 +754,7 @@ async function stressTest() {
 
 async function runCampaign() {
   $('#btn-run').disabled = true; stopPlayer();
-  if (document.body.dataset.level === 'simple') $('#btn-run').parentElement.classList.add('tech');
+  if (document.body.dataset.level === 'simple') $('#btn-run').classList.add('tech');
   $('#run-body').innerHTML = '<p class="muted" style="margin-top:16px">считаем кампанию по часам, две-три секунды…</p>';
   $('#stands-out').innerHTML = '';
   try {
@@ -801,8 +803,8 @@ function prepareRun(r) {
       <div class="range"><input type="range" id="p-slider" min="1" max="${N}" value="1"><span class="num muted" id="p-pos" style="white-space:nowrap"></span></div>
     </div>
     <div class="stats norule" id="hour-tiles" style="margin-top:8px"></div>
-    <div class="digest-grid"><div class="digest-text" id="digest"></div><div><div class="advice"><h6 style="margin-bottom:6px">Что делать</h6><div id="advice"></div></div><div class="feed short" id="feed-short"></div></div></div>
     <div id="decision-banner"></div>
+    <div class="digest-grid"><div class="digest-text" id="digest"></div><div><div class="advice"><h6 style="margin-bottom:6px">Что делать</h6><div id="advice"></div></div><div class="feed short" id="feed-short"></div></div></div>
     <div id="pending-slot" class="cards" style="margin-top:16px"></div>
     <div class="charts2"><div><h6 style="margin-bottom:12px">${cap(K.nomPl)} накопительно: план · факт · план без изменений</h6><div class="chart"><canvas id="c-run-kpi"></canvas></div></div><div><h6 style="margin-bottom:12px">Накопительный расход, ₽</h6><div class="chart"><canvas id="c-run-spend"></canvas></div></div></div>
     <div class="tech" style="margin-top:32px"><div class="head-row" style="margin-bottom:12px"><h4 style="margin:0">Каналы в этот час</h4><div class="seg" id="hourcols-seg"><button type="button" class="btn" id="btn-hourcols-brief">Кратко</button><button type="button" class="btn" id="btn-hourcols-all">Все столбцы</button></div></div><div class="scroll"><table class="table" id="hour-table" style="font-size:13px"></table></div></div>
@@ -861,7 +863,7 @@ function showHour(H) {
   $('#p-clock').textContent = hourLabel(H); $('#p-pos').innerHTML = `день ${Math.floor((H-1)/24) + 1} из ${Math.ceil(N/24)}${dayDate(Math.floor((H-1)/24) + 1) ? ' · ' + dayDate(Math.floor((H-1)/24) + 1) : ''}<span class="tech"> · час ${H} / ${N}</span>`;
   const sts = shownStatus(r, H);
   const cardHere = m.proposals.some(p => p.hour === H && p.applied_by === 'pending' && !(r.decisions||{})[p.hour]);
-  $('#p-status').innerHTML = cardHere ? '<span class="pill watch" title="карточка ждёт вашего решения — она под сводкой">нужно решение</span>' : `<span class="pill ${sts}" title="${sts !== rec.status ? 'по событию рынка: канал не отдаёт показы или сработал детектор' : 'по отклонению факта от плана'}; шкала: в норме — внутри разброса, наблюдаем — за разбросом, сбой канала — канал не отдаёт показы или детектор">${STATUS_RU[sts]}</span>`;
+  $('#p-status').innerHTML = cardHere ? '<span class="pill watch" title="карточка ждёт вашего решения — она под сводкой">нужно решение</span>' : (r.shockHours.includes(H) && sts !== 'fire') ? '<span class="pill watch" title="на рынке событие: автоматика перерешит остаток в ближайшие часы — смотрите ленту и карточки">событие рынка</span>' : `<span class="pill ${sts}" title="${sts !== rec.status ? 'по событию рынка: канал не отдаёт показы или сработал детектор' : 'по отклонению факта от плана'}; шкала: в норме — внутри разброса, наблюдаем — за разбросом, сбой канала — канал не отдаёт показы или детектор">${STATUS_RU[sts]}</span>`;
   stage('run', `${hourLabel(H)} · ${STATUS_RU[sts]}`, H === N ? 'done' : '');
   const errS = rec.plan_cum_spend ? 1 - rec.fact_cum_spend / rec.plan_cum_spend : 0, errK = rec.plan_cum_kpi ? 1 - rec.fact_cum_kpi / rec.plan_cum_kpi : 0, zk = z.hours[H-1].fact_cum_kpi, dz = rec.fact_cum_kpi - zk;
   const pendingNow = m.proposals.filter(p => p.hour <= H && p.applied_by === 'pending' && !(r.decisions||{})[p.hour]);
@@ -997,14 +999,19 @@ function digest(r, H) {
     : st === 'fire' ? 'канал не отдаёт показы, автоматика заново делит остаток бюджета — смотрите <a href="#pending-slot">карточку переноса</a> и <a href="#feed-short">события</a>'
     : st === 'watch' ? 'вышли за разброс, но канал цел: пересчёт не позже чем через 6 часов, делать ничего не нужно'
     : fresh.length ? `нужно ваше решение по <a href="#pending-slot">карточке</a> (${hourLabel(fresh[fresh.length-1].hour)}): сумма выше лимита автоматики`
+    : r.shockHours.includes(H) ? 'на рынке событие — канал отключился или подорожал. Автоматика перерешит остаток в ближайшие часы: нажмите «Продолжить ▶» и следите за <a href="#feed-short">событиями</a> и карточками'
     : recent.length ? 'рынок изменился, автоматика заново делит остаток бюджета — смотрите <a href="#feed-short">что происходило</a> и <a href="#pending-slot">карточку</a>'
     : 'кампания идёт по плану, ничего делать не нужно';
-  const body = `Прошло ${pct(timeShare,0)} времени, потрачено ${pct(spendShare,0)} бюджета, получено ${pct(kpiShare,0)} ${K.promised}. `
-    + (detected.length ? `Слом канала: ${detected.map(([c,h])=>esc(nm(c))+' ('+hourLabel(h)+')').join(', ')}. ` : '')
-    + (recent.length ? `За сутки: ${recent.slice(-2).map(e => esc(ru(e.text.replace(/^час \d+:\s*/, ''))) + ' (' + hourLabel(e.h) + ')').join('; ')}. ` : '')
-    + (last ? `Последний перенос: ${hourLabel(last.hour)}, ${rub(last.amount_rub)} из «${esc(nm(last.from_channel))}» в «${esc(nm(last.to_channel))}». ` : '')
-    + (stale.length ? `Не решено вовремя: ${stale.length} ${pw(stale.length, ['карточка','карточки','карточек'])}, деньги остались в прежнем канале. ` : '')
-    + (rec.reserve > 0 ? `В резерве ${rub(rec.reserve)}. ` : '');
+  // сводка строками «показатель — значение»: цифры жирным, подписи серым, читается сверху вниз
+  const row = (k, v) => `<div class="kv"><span>${k}</span><span>${v}</span></div>`;
+  const body = `<div class="kvs">`
+    + row('Прошло', `<b>${pct(timeShare,0)}</b> времени`) + row('Потрачено', `<b>${pct(spendShare,0)}</b> бюджета`) + row('Получено', `<b>${pct(kpiShare,0)}</b> ${K.promised}`)
+    + (detected.length ? row('Слом канала', detected.map(([c,h]) => `<b>${esc(nm(c))}</b> (${hourLabel(h)})`).join(', ')) : '')
+    + (recent.length ? row('За сутки', recent.slice(-2).map(e => esc(ru(e.text.replace(/^час \d+:\s*/, ''))) + ' (' + hourLabel(e.h) + ')').join('; ')) : '')
+    + (last ? row('Последний перенос', `${hourLabel(last.hour)} — <b>${rub(last.amount_rub)}</b> из «${esc(nm(last.from_channel))}» в «${esc(nm(last.to_channel))}»`) : '')
+    + (stale.length ? row('Не решено вовремя', `<b>${stale.length} ${pw(stale.length, ['карточка','карточки','карточек'])}</b>, деньги остались в прежнем канале`) : '')
+    + (rec.reserve > 0 ? row('В резерве', `<b>${rub(rec.reserve)}</b>`) : '')
+    + `</div>`;
   return {head: `Сводка · ${hourLabel(H)}`, body, advice};
 }
 
@@ -1103,7 +1110,7 @@ function renderSummary(r) {
   const withPromise = PLAN.allocations.filter(a => allocKpi(a, k) > 0).map(a => { const c = a.channel_id; const got = r.cum[c] ? r.cum[c].kpi[N-1] : 0, spend = r.cum[c] ? r.cum[c].spend[N-1] : 0; const pf = got ? spend / got : Infinity, pp = a.budget_rub / allocKpi(a, k); return {a, d: pf / pp - 1, pf, pp}; }).filter(x => isFinite(x.d));
   const best = withPromise.reduce((m, x) => x.d < m.d ? x : m, withPromise[0]), worst = withPromise.reduce((m, x) => x.d > m.d ? x : m, withPromise[0]);
   $('#summary-body').innerHTML = `
-    <div class="statement"><h6 style="margin-bottom:16px">Коротко</h6><div class="big">Обещали ${kpiN(pr.value, k, true)} по ${fmt(cpaPlan, cpaPlan < 10 ? 2 : 0)} ₽ за ${rubShort(v.promised_spend)}${cautious ? ` (расчётный план ${kpiN(v.promised_kpi, k)}, обещание с запасом)` : ''}. Получили ${kpiN(v.actual_kpi, k, true)} по ${fmt(cpaFact, cpaFact < 10 ? 2 : 0)} ₽ за ${rubShort(v.actual_spend)}${returned > 1000 ? `, ${rubShort(returned)} не потрачены — возвращаем` : ''}. ${verdictPhrase}.</div>${r.isStatic ? '' : `<p style="margin:16px 0 0;font-size:15px;max-width:900px">Если бы по ходу ничего не меняли и деньги между каналами не переносили, было бы ${kpiN(v.frozen_kpi, k)} за ${rubShort(v.frozen_spend)}: ведение дало ${gain >= 0 ? '+' : ''}${fmt(gain)} ${plural(gain, k)} за ${gainSpend >= 0 ? '+' : ''}${rub(gainSpend)}.</p>`}</div>
+    <div class="statement"><h6 style="margin-bottom:16px">Коротко</h6><div class="big">Обещали <b>${kpiN(pr.value, k, true)}</b> по <b>${fmt(cpaPlan, cpaPlan < 10 ? 2 : 0)} ₽</b> за ${rubShort(v.promised_spend)}${cautious ? ` (расчётный план ${kpiN(v.promised_kpi, k)}, обещание с запасом)` : ''}. Получили <b>${kpiN(v.actual_kpi, k, true)}</b> по <b>${fmt(cpaFact, cpaFact < 10 ? 2 : 0)} ₽</b> за ${rubShort(v.actual_spend)}${returned > 1000 ? `, <b>${rubShort(returned)}</b> не потрачены — возвращаем` : ''}. <b>${esc(verdictPhrase.split(':')[0])}</b>${verdictPhrase.includes(':') ? ':' + esc(verdictPhrase.split(':').slice(1).join(':')) : ''}.</div>${r.isStatic ? '' : `<p style="margin:16px 0 0;font-size:15px;max-width:900px">Если бы по ходу ничего не меняли и деньги между каналами не переносили, было бы ${kpiN(v.frozen_kpi, k)} за ${rubShort(v.frozen_spend)}: ведение дало ${gain >= 0 ? '+' : ''}${fmt(gain)} ${plural(gain, k)} за ${gainSpend >= 0 ? '+' : ''}${rub(gainSpend)}.</p>`}</div>
     <div class="stats">${tiles.map(stat).join('')}</div>
     <div class="head-row" style="margin:32px 0 12px"><h4 style="margin:0">По каналам: обещали и получили</h4><button class="btn btn-secondary btn-sm" id="btn-csv-summary">Скачать CSV</button></div>
     <div class="scroll"><table class="table"><thead><tr><th>Канал</th><th>${h2('Бюджет', 'по плану, ₽')}</th><th>Потрачено, ₽</th><th>Разница</th><th>${h2(cap(K.nomPl), 'по плану')}</th><th>Получено</th><th>Разница</th><th>${h2(K.price + ' факт', '(план), ₽')}</th></tr></thead><tbody>${perChannel}<tr style="font-weight:600"><td>Итого</td><td>${fmt(v.promised_spend)}</td><td>${fmt(v.actual_spend)}</td><td>${spct(v.actual_spend / v.promised_spend - 1)}</td><td>${fmt(v.promised_kpi)}</td><td>${fmt(v.actual_kpi)}</td><td>${spct(v.actual_kpi / v.promised_kpi - 1)}</td><td>${fmt(cpaFact, cpaFact < 10 ? 2 : 0)} <span class="muted">(${fmt(cpaPlan, cpaPlan < 10 ? 2 : 0)})</span></td></tr></tbody></table></div>
