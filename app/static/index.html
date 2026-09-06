@@ -226,7 +226,7 @@
       <div class="field"><label>Если план перевыполняется</label><select class="input" id="hold_plan"><option value="true">вернуть неизрасходованное</option><option value="false">потратить весь бюджет</option></select></div>
       <div class="field" id="f-cpa"><label>Потолок цены конверсии (CPA), ₽</label><input class="input num money" id="max_cpa" type="text" inputmode="numeric" placeholder="без ограничения"></div>
     </div>
-    <p class="muted" style="margin:10px 0 0;max-width:640px">Лимит — сколько денег автоматика может переложить между каналами без вашего согласия; перенос дороже спросит вас. Пусто — решает сама. Потолок цены: каналы дороже этой цены за конверсию не получат бюджет.</p>
+    <p class="muted" style="margin:10px 0 0;max-width:640px">Лимит — сколько денег автоматика может переложить между каналами без согласия человека; перенос дороже <span class="tech">спросит вас</span><span class="simple">решает менеджер</span>. Пусто — решает сама. Потолок цены: каналы дороже этой цены за конверсию не получат бюджет.</p>
   </details>
   <div class="hr"></div>
   <div class="actions">
@@ -417,7 +417,7 @@ async function init() {
   const qs = new URLSearchParams(location.search);
   const urlLevel = qs.get('level') || {customer: 'simple', manager: 'tech'}[qs.get('role')] || null;
   setLevel(urlLevel === 'tech' || (!urlLevel && saved === 'tech') ? 'tech' : 'simple', false);
-  document.querySelectorAll('.lvl .btn').forEach(b => b.onclick = () => { setLevel(b.dataset.level); if (PLAN && !PLAN.infeasibility && !PLAN.is_empty) { renderPlanTable(PLAN); planActions(PLAN); } if (RUN && RUN.main) { $('#decision-banner').innerHTML = ''; RUN._bannerH = null; showHour(PLAYER.h || 1); } });
+  document.querySelectorAll('.lvl .btn').forEach(b => b.onclick = () => { setLevel(b.dataset.level); if (PLAN && !PLAN.infeasibility && !PLAN.is_empty) { renderPlanTable(PLAN); planActions(PLAN); } if (RUN && RUN.main && !DECIDING) { $('#decision-banner').innerHTML = ''; RUN._bannerH = null; showHour(PLAYER.h || 1); } });
   document.querySelectorAll('.step').forEach(b => b.onclick = () => { if (REACH[b.dataset.go]()) showScreen(b.dataset.go); });
   document.querySelectorAll('#mode-seg .btn').forEach(b => b.onclick = () => setMode(b.dataset.mode));
   $('#objective').onchange = syncCpa; $('#target_kpi').onchange = syncCpa; syncCpa();
@@ -734,7 +734,7 @@ async function approvePlan() {
     stage('plan', `утверждён · ${kpiN(PLAN.forecast.p50, PLAN.kpi_name)}`, 'done');
     planActions(PLAN); planFoot(PLAN);
     showRunSection(PLAN);
-    // планер утверждает, трафик-менеджер запускает: в подробном виде остаёмся на плане; в простом сразу запускаем кампанию
+    // в кабинете менеджера остаёмся на плане (запуск — отдельный шаг с условиями прогона); в кабинете заказчика сразу запускаем кампанию
     refreshSteps(); window.scrollTo(0, 0);
     if (document.body.dataset.level === 'simple') { showScreen('run'); runCampaign(); }
   } catch (e) { $('#plan-foot').innerHTML = `<span class="err">Не утвердили: ${esc(ru(e.message))}</span>`; }
@@ -930,7 +930,7 @@ function stopReasons(r, H) {
   for (const sk of (r.custom_shocks||[])) if (sk.start_hour + 1 === H) out.push(`свой шок — ${SHOCK_PARAM_RU[sk.parameter] || sk.parameter} ×${String(sk.multiplier).replace('.', ',')} в «${nm(sk.channel_id)}»`);
   for (const e of m.hours[H-1].events) out.push(ru(e.replace(/^час \d+:\s*/, '')));
   for (const [c, h] of Object.entries(r.verdict.detection_hours)) if (h === H) out.push('детектор: слом канала «' + nm(c) + '»');
-  for (const p of m.proposals) if (p.hour === H) out.push(p.applied_by === 'pending' && !(r.decisions||{})[p.hour] ? (isCustomer() ? 'перенос выше лимита ждёт решения менеджера' : 'карточка ждёт вашего решения') : 'перенос бюджета');
+  for (const p of m.proposals) if (p.hour === H) { const waits = p.applied_by === 'pending' && !(r.decisions||{})[p.hour]; if (waits && isCustomer()) continue; out.push(waits ? 'карточка ждёт вашего решения' : 'перенос бюджета'); }
   return out;
 }
 // У заказчика плеер не останавливается на карточках, ждущих решения: решает менеджер. Шоки, события и детектор — остановка в обоих кабинетах
@@ -942,9 +942,11 @@ function stops(r) {
 function stopKind(r, h) {
   const m = r.main;
   if (r.shockHours.includes(h)) return 'шок рынка';
-  if (m.proposals.some(p => p.hour === h && p.applied_by === 'pending')) return 'карточка ждёт решения';
-  if (m.proposals.some(p => p.hour === h)) return 'перенос бюджета';
   if (Object.values(r.verdict.detection_hours).includes(h)) return 'детектор';
+  // у заказчика плеер на карточках не стоит, поэтому для него причина — то, что действительно остановило: событие или детектор
+  if (!isCustomer() && m.proposals.some(p => p.hour === h && p.applied_by === 'pending')) return 'карточка ждёт решения';
+  if (r.eventHours.includes(h)) return 'событие рынка';
+  if (m.proposals.some(p => p.hour === h)) return 'перенос бюджета';
   return 'событие рынка';
 }
 
@@ -1010,7 +1012,7 @@ function digest(r, H) {
   const advice = H === N ? 'кампания завершена, итог ниже'
     : st === 'fire' ? 'канал не отдаёт показы, автоматика заново делит остаток бюджета — смотрите <a href="#pending-slot">карточку переноса</a> и <a href="#feed-short">события</a>'
     : st === 'watch' ? 'вышли за разброс, но канал цел: пересчёт не позже чем через 6 часов, делать ничего не нужно'
-    : fresh.length ? `<span class="tech">нужно ваше решение по <a href="#pending-slot">карточке</a> (${hourLabel(fresh[fresh.length-1].hour)}): сумма выше лимита автоматики</span><span class="simple">перенос ${hourLabel(fresh[fresh.length-1].hour)} дороже лимита ждёт решения менеджера; пока он не решён, деньги остаются в прежнем канале</span>`
+    : fresh.length ? `<span class="tech">нужно ваше решение по <a href="#pending-slot">карточке</a> (${hourLabel(fresh[fresh.length-1].hour)}): сумма выше лимита автоматики</span><span class="simple">перенос (${hourLabel(fresh[fresh.length-1].hour)}) дороже лимита ждёт решения менеджера; пока он не решён, деньги остаются в прежнем канале</span>`
     : r.shockHours.includes(H) ? 'на рынке событие — канал отключился или подорожал. Автоматика перерешит остаток в ближайшие часы: нажмите «Продолжить ▶» и следите за <a href="#feed-short">событиями</a> и карточками'
     : recent.length ? 'рынок изменился, автоматика заново делит остаток бюджета — смотрите <a href="#feed-short">что происходило</a> и <a href="#pending-slot">карточку</a>'
     : 'кампания идёт по плану, ничего делать не нужно';
@@ -1027,8 +1029,9 @@ function digest(r, H) {
   return {head: `Сводка · ${hourLabel(H)}`, body, advice};
 }
 
+let DECIDING = false; // решение в полёте: переключение кабинета не перерисовывает прогон, иначе кнопки разблокируются в обход setRunBusy
 async function decideProposal(hour, decision) {
-  const H = PLAYER.h; stopPlayer(); setRunBusy(true);
+  const H = PLAYER.h; stopPlayer(); setRunBusy(true); DECIDING = true;
   $('#decision-banner').innerHTML = '<p class="muted" style="margin-top:16px">пересчитываем кампанию с вашим решением на тех же случайных числах — 5–10 секунд, плеер пока заблокирован…</p>'; $('#decision-banner').scrollIntoView({behavior: 'smooth', block: 'center'});
   try {
     const run = RUN;
@@ -1039,9 +1042,10 @@ async function decideProposal(hour, decision) {
     $('#decision-banner').innerHTML = decision === 'decline'
       ? `<div class="verdict note"><h6 style="margin-bottom:6px">Решение принято</h6><b>Перенос (${hourLabel(hour)}) отклонён.</b> Деньги остались в прежнем канале; автоматика продолжает в пределах лимита.</div>`
       : decision === 'undo' ? `<div class="verdict note"><h6 style="margin-bottom:6px">Перенос отменён</h6><b>Перенос (${hourLabel(hour)}) отменён — кампания пересчитана без него.</b> Что изменилось: ${eff.kpi_delta >= 0 ? '+' : ''}${fmt(eff.kpi_delta)} ${plural(eff.kpi_delta, RUN.verdict.kpi_name)} и ${eff.spend_delta >= 0 ? '+' : ''}${rub(eff.spend_delta)} к итогу; карточка снова ждёт решения.</div>`
-      : `<div class="verdict ${eff.kpi_delta >= 0 ? 'ok' : 'alert'}"><h6 style="margin-bottom:6px">Решение принято</h6><b>Перенос (${hourLabel(hour)}) сделан. Что изменилось:</b> ${eff.kpi_delta >= 0 ? '+' : ''}${fmt(eff.kpi_delta)} ${plural(eff.kpi_delta, RUN.verdict.kpi_name)} и ${eff.spend_delta >= 0 ? '+' : ''}${rub(eff.spend_delta)} к итогу кампании; отклонение по ${K.dat} ${pct(eff.deviation_kpi_before)} → ${pct(eff.deviation_kpi_after)}. Тот же рынок и та же случайность — разница только от вашего решения.</div>`;
+      : `<div class="verdict ${eff.kpi_delta >= 0 ? 'ok' : 'alert'}"><h6 style="margin-bottom:6px">Решение принято</h6><b>Перенос (${hourLabel(hour)}) сделан. Что изменилось:</b> ${eff.kpi_delta >= 0 ? '+' : ''}${fmt(eff.kpi_delta)} ${plural(eff.kpi_delta, RUN.verdict.kpi_name)} и ${eff.spend_delta >= 0 ? '+' : ''}${rub(eff.spend_delta)} к итогу кампании; отклонение по ${K.dat} ${pct(eff.deviation_kpi_before)} → ${pct(eff.deviation_kpi_after)}. Тот же рынок и та же случайность — разница только от <span class="tech">вашего решения</span><span class="simple">решения менеджера</span>.</div>`;
     $('#decision-banner').scrollIntoView({behavior: 'smooth', block: 'center'});
   } catch (e) { setRunBusy(false); $('#decision-banner').innerHTML = `<p class="err">Не пересчитали: ${esc(ru(e.message))}</p>` + (String(e.message).includes('не найден') ? '<button class="btn btn-secondary btn-sm" onclick="runCampaign()">Запустить заново</button>' : ''); }
+  finally { DECIDING = false; }
 }
 
 function standBox(id) {
