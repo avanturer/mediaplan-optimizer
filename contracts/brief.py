@@ -60,6 +60,12 @@ class Brief(BaseModel):
         unknown = set(self.locked) - set(self.channel_ids)
         if unknown:
             raise ValueError(f"зафиксированы каналы вне набора брифа: {sorted(unknown)}")
+        if len(set(self.channel_ids)) != len(self.channel_ids):
+            raise ValueError("канал указан в брифе дважды")
+        if any(v < 0 for v in self.locked.values()):
+            raise ValueError("фиксация бюджета канала не может быть отрицательной")
+        if has_budget and sum(self.locked.values()) > self.budget_rub + 1e-6:
+            raise ValueError("сумма фиксаций по каналам больше бюджета брифа")
         return self
 
     @property

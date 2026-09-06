@@ -47,8 +47,10 @@ class Proposal(BaseModel):
     cost_of_decision: str = Field(description="цена решения словами, например «CPA вырастет на 3 %»")
     cost_of_inaction: str = Field(description="цена бездействия словами, например «недоберём 14 %»")
     cpa_delta_pct: float | None = None
-    inaction_kpi_shortfall_pct: float | None = None
-    applied_by: str = Field(pattern="^(system|human|pending)$")
+    inaction_kpi_shortfall_pct: float | None = Field(default=None, description="недобор к концу в процентах от всего плана по KPI")
+    inaction_kpi_shortfall_abs: float | None = Field(default=None, description="недобор к концу в единицах KPI")
+    cause_kind: str = Field(default="fact", pattern="^(fact|drop|rise|pause)$", description="что вызвало ход: факт лучше плана, слом, рост CTR, пауза канала")
+    applied_by: str = Field(pattern="^(system|human|pending|rejected)$")
 
 
 class ExecutionDecision(BaseModel):
