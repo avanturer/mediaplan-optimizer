@@ -86,10 +86,12 @@ def test_locked_channel_is_respected(catalog, curves, demo_brief):
 def test_max_cpa_freezes_expensive_channels(catalog, curves, demo_brief):
     capped = demo_brief.model_copy(update={"max_cpa_rub": 500.0})
     p = plan(capped, catalog, curves)
+    # Лимит задан на среднюю цену конверсии; при вогнутой кривой средняя цена ниже предельной,
+    # а предельная цена следующей порции у остановленного канала по построению выше лимита.
+    assert p.total_budget_rub / p.total_kpi <= 500.0
     for a in p.allocations:
-        if a.budget_rub > 0 and a.marginal_cost_per_1000_kpi_rub:
-            # последняя порция может чуть перешагнуть лимит: заморозка происходит на следующей
-            assert a.marginal_cost_per_1000_kpi_rub / 1000 <= 500.0 * 1.2
+        if a.budget_rub > 0 and a.cpa_rub:
+            assert a.cpa_rub <= 500.0
 
 
 def test_allocation_stable_under_finer_steps(catalog, curves, demo_brief):
