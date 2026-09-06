@@ -13,7 +13,8 @@
   распределение остатка тем же жадным алгоритмом на кривых, поправленных
   фактом (receding horizon); внутренний держит темп бакетизированным
   мультипликативным множителем (arXiv:2509.25429) с мёртвой зоной и
-  ограничителями. Детектор CUSUM переключает оценки и вызывает перерешение.
+  ограничителями. Детектор по окнам с тестом значимости переключает оценки
+  и вызывает перерешение.
 """
 
 from __future__ import annotations
@@ -25,7 +26,10 @@ import numpy as np
 
 from brain.assumptions import campaign_audience_multiplier, fatigue_delta
 from brain.config import (
+    CARD_MIN_INTERVAL_HOURS,
+    CASE_THRESHOLD,
     DEAD_ZONE,
+    DETECTOR_MIN_EXPECTED_EVENTS,
     ERROR_BANDS,
     LAMBDA_MAX,
     LAMBDA_MIN,
@@ -33,6 +37,7 @@ from brain.config import (
     PID_KD,
     PID_KI,
     PID_KP,
+    POOL_FLOOR_SHARE,
     PRIOR_CLICKS,
     PRIOR_IMPRESSIONS,
     PROBE_SHARE,
@@ -40,14 +45,20 @@ from brain.config import (
     REPLAN_EVERY_HOURS,
     REPLAN_GRID_SIZE,
     REPLAN_STEPS,
+    REPLAN_WARMUP_HOURS,
+    RESERVE_BISECTION_STEPS,
+    RESERVE_ELASTICITY,
     RESERVE_STEP_SHARE,
-    RESERVE_WARMUP_HOURS,
+    RESERVE_WARMUP_SHARE,
+    SATURATION_TOLERANCE,
+    SHARE_FLOOR,
     SHARE_RATE_LIMIT,
 )
 from brain.curves import CurvePoint, ResponseCurve
 from brain.executor.estimator import ChannelEstimate, RateEstimator
 from brain.planner.allocator import allocate as greedy_allocate
 from brain.planner.allocator import build_models
+from brain.texts import kpi_label, num
 from contracts import (
     ChannelDecision,
     ChannelStatus,
@@ -112,14 +123,27 @@ class BaseExecutor:
             self.fact_cum_by_channel[cid] += ch.spend
             self.fact_cum_spend += ch.spend
             self.fact_cum_kpi += _kpi_of(ch, self.kpi)
-            if self.estimates[cid].observe(ch, self.kpi, obs.hour):
+            if self.estimates[cid].observe(ch, self.kpi, obs.hour, rate_scale=self._rate_scale(cid, obs.hour - 1)):
                 fired.append(cid)
                 self.detection_hours.setdefault(cid, obs.hour)
         self.hour = obs.hour
-        new_events = [f"час {obs.hour}: детектор: отдача канала {cid} упала, оценки сброшены" for cid in fired]
+        new_events = []
+        for cid in fired:
+            est = self.estimates[cid]
+            if est.last_event == "rise":
+                new_events.append(
+                    f"час {obs.hour}: детектор: отдача канала {cid} выросла на {(est.detector.last_ratio or 1) - 1:.0%} при прежней цене: "
+                    "похоже на фрод, рост не учитываем до подтверждения конверсиями"
+                )
+            else:
+                what = "конверсии на рубль" if est.last_signal == "conversions" else "клики на рубль"
+                new_events.append(f"час {obs.hour}: детектор: {what} в канале {cid} упали, оценки сброшены")
         for cid in self.channel_ids:
             est = self.estimates[cid]
-            if est.hours_without_delivery == PAUSE_AFTER_HOURS and self.last_caps.get(cid, 0.0) > 0:
+            if est.hours_without_delivery == PAUSE_AFTER_HOURS and self._cap_is_meaningful(cid, obs.hour - 1):
+                # пауза канала это слом: попадает в детектор и поднимает статус, как и падение отдачи
+                est.mark_paused(obs.hour)
+                self.detection_hours.setdefault(cid, obs.hour)
                 new_events.append(f"час {obs.hour}: канал {cid} не отдаёт показы {PAUSE_AFTER_HOURS} часа подряд")
         self.events.extend(new_events)
         self._after_observe(fired)
@@ -188,14 +212,21 @@ class BaseExecutor:
     def _status(self, err_spend: float, err_kpi: float) -> TrackingStatus:
         if any(est.shock_active for est in self.estimates.values()):
             return TrackingStatus.FIRE
-        band = max(self.plan.corridor_rel, DEAD_ZONE)
-        if abs(err_spend) > band or abs(err_kpi) > band:
+        # Пороги статуса привязаны к порогу приёмки кейса, а не к коридору плана: коридор
+        # ±35 % показывал «в норме» при отставании на 25 % (ревью 06.09). В первые сутки
+        # ошибка темпа считается от маленького плана и шумит, статус там только по детектору.
+        if self.hour < REPLAN_WARMUP_HOURS:
+            return TrackingStatus.OK
+        worst = max(abs(err_spend), abs(err_kpi))
+        if worst > CASE_THRESHOLD:
+            return TrackingStatus.FIRE
+        if worst > CASE_THRESHOLD / 2:
             return TrackingStatus.WATCH
         return TrackingStatus.OK
 
     def _channel_status(self, cid: str, cap: float) -> ChannelStatus:
         est = self.estimates[cid]
-        if est.hours_without_delivery >= PAUSE_AFTER_HOURS and self.last_caps.get(cid, 0) > 0:
+        if est.hours_without_delivery >= PAUSE_AFTER_HOURS and self._cap_is_meaningful(cid, self.hour - 1):
             return ChannelStatus.PAUSED
         if cap <= 0 and self.plan_budget[cid] > 0:
             return ChannelStatus.FROZEN_CAPACITY
@@ -207,6 +238,42 @@ class BaseExecutor:
             return "по плану канал в этот час не работает"
         ratio = cap / planned if planned > 0 else 0.0
         return f"лимит {cap:,.0f} ₽ против плановых {planned:,.0f} ₽ (×{ratio:.2f})"
+
+    def _cap_is_meaningful(self, cid: str, hour_index: int) -> bool:
+        """Лимит часа позволял купить хотя бы десяток показов по кривой: иначе тишина канала это не пауза.
+
+        Урезанный до копеек канал (SMS по 13 ₽ в час при цене 3,7 ₽ за сообщение)
+        отдаёт ноль показов по арифметике, а не потому что сломался.
+        """
+        cap = self.last_caps.get(cid, 0.0)
+        if cap <= 0:
+            return False
+        curve = self.curves[cid]
+        share = curve.hourly_share(max(hour_index, 0))
+        expected = curve.impressions_at(cap / share) * share if share > 0 else 0.0
+        return expected >= DETECTOR_MIN_EXPECTED_EVENTS
+
+    def _plan_daily(self, cid: str) -> float:
+        return self.plan_budget[cid] / max(self.horizon / 24, 1.0)
+
+    def _rate_scale(self, cid: str, hour_index: int) -> float:
+        """Во сколько раз отдача на рубль по кривой на намеченном дневном уровне отличается от плановой.
+
+        Перерешение меняет расход канала, а цена показа по ландшафту зависит от объёма:
+        без этой поправки детектор принял бы дешевеющий после урезания канал за «рост».
+        """
+        curve = self.curves[cid]
+        share = curve.hourly_share(max(hour_index, 0))
+        cap = self.last_caps.get(cid, 0.0)
+        plan_daily = self._plan_daily(cid)
+        intended = cap / share if share > 0 and cap > 0 else plan_daily
+
+        def per_rub(daily: float) -> float:
+            spend = curve.effective_spend(daily)
+            return curve.impressions_at(daily) / spend if spend > 0 else 0.0
+
+        base = per_rub(plan_daily)
+        return per_rub(intended) / base if base > 0 else 1.0
 
     def _shadow_price(self, remaining_budget: float) -> float | None:
         plan_spend, plan_kpi = self._plan_cum(self.horizon)
@@ -286,7 +353,16 @@ class AdaptiveExecutor(BaseExecutor):
     name: str = "adaptive"
     auto_apply_above_limit: bool = True
     approved_hours: set[int] = field(default_factory=set)  # часы, в которые человек одобрил ход выше лимита
+    rejected_hours: set[int] = field(default_factory=set)  # часы, чьи ходы человек отклонил или откатил
+    frozen_donors: set[str] = field(default_factory=set)  # каналы, из которых нельзя забирать, пока их карточка ждёт или отклонена
+    share_anchor: dict[str, float] = field(default_factory=dict)  # доли каналов на начало текущих суток
+    hold_cards: set[str] = field(default_factory=set)  # каналы, по которым карточка «держим» уже выдана в этом сломе
+    uncarded_rub: dict[str, float] = field(default_factory=dict)  # переносы по факту, ещё не показанные карточкой, по донорам
+    last_taker_hour: dict[str, int] = field(default_factory=dict)  # когда канал последний раз получал деньги: гистерезис против пинг-понга
+    last_card_hour: dict[str, int] = field(default_factory=dict)
+    anchor_hour: int = -HOURS_IN_WEEK
     hold_plan: bool = True  # False = выжимать максимум KPI, резерв не используется
+    reserve_balance: float = 1.0  # 1 = недорасход равен перевыполнению (метрика кейса); 0 = держать KPI ровно на плане
     lam: float = 1.0  # множитель темпа по расходу
     reserve_rub: float = 0.0  # бюджет, который решено не тратить: план по KPI и так выполняется
     target_budget: dict[str, float] = field(default_factory=dict)  # бюджет канала на всю кампанию после перерешений
@@ -301,9 +377,11 @@ class AdaptiveExecutor(BaseExecutor):
     def _after_observe(self, fired: list[str]) -> None:
         if fired:
             self.pending_replan = True
+            # сломанный канал больше не защищён решением человека: причина хода изменилась
+            self.frozen_donors.difference_update(fired)
         for cid in self.channel_ids:
             est = self.estimates[cid]
-            if est.hours_without_delivery >= PAUSE_AFTER_HOURS and self.last_caps.get(cid, 0.0) > 0:
+            if est.hours_without_delivery >= PAUSE_AFTER_HOURS and self._cap_is_meaningful(cid, self.hour - 1):
                 if cid not in self.unavailable:
                     self.unavailable.add(cid)
                     self.pending_replan = True
@@ -318,7 +396,12 @@ class AdaptiveExecutor(BaseExecutor):
     def _caps(self, h: int, remaining_budget: float) -> dict[str, float]:
         if self.pending_replan or h - self.last_replan_hour >= REPLAN_EVERY_HOURS:
             self._update_lambda(h)  # темп корректируется блоками, а не каждый час: меньше дёрганья
-            self._replan(h, remaining_budget)
+            if self.pending_replan or h >= REPLAN_WARMUP_HOURS:
+                self._replan(h, remaining_budget)
+            else:
+                # первые сутки исполняется утверждённый план как есть: переоптимизация по шести
+                # ночным часам переворачивала план и просила человека вернуть всё через сутки
+                self.last_replan_hour = h
         caps = {}
         for cid in self.channel_ids:
             share, tail = self._profile_tail(cid, h)
@@ -358,7 +441,12 @@ class AdaptiveExecutor(BaseExecutor):
             est = self.estimates[cid]
             price_ratio = 1.0
             if est.observed_ecpm and est.cum_impressions > 0:
-                expected_ecpm = self.catalog.by_id(cid).ecpm_mid
+                # ожидаемая цена берётся из кривой на фактическом дневном уровне расхода, а не из
+                # середины каталога: кривая уже учитывает, что выкуп дорожает с объёмом
+                days_left = max((self.horizon - h) / 24, 1.0)
+                daily_level = max(self.target_budget[cid] - self.fact_cum_by_channel[cid], 0.0) / days_left or self._plan_daily(cid)
+                imps = curve.impressions_at(daily_level)
+                expected_ecpm = curve.effective_spend(daily_level) / imps * 1000 if imps > 0 else self.catalog.by_id(cid).ecpm_mid
                 price_ratio = expected_ecpm / est.observed_ecpm  # дороже = меньше показов на рубль
                 price_ratio = min(max(price_ratio, 0.3), 3.0)
             if cid in self.unavailable:
@@ -370,7 +458,7 @@ class AdaptiveExecutor(BaseExecutor):
             adjusted[cid] = replace(
                 curve,
                 points=points,
-                ctr=est.ctr.value,
+                ctr=min(est.ctr.value, curve.ctr) if est.suspicious else est.ctr.value,
                 cvr=est.cvr.value,
                 max_daily_spend=curve.max_daily_spend if price_ratio > 0 else 0.0,
                 max_daily_impressions=curve.max_daily_impressions * price_ratio,
@@ -387,36 +475,69 @@ class AdaptiveExecutor(BaseExecutor):
         pools = {}
         for cid in self.channel_ids:
             total_pool = self.catalog.by_id(cid).capacity_mid * campaign_audience_multiplier()
-            pools[cid] = max(total_pool - self.estimates[cid].cum_reach, total_pool * 0.1)
+            pools[cid] = max(total_pool - self.estimates[cid].cum_reach, total_pool * POOL_FLOOR_SHARE)
         models = build_models(curves, days_left, pools, fatigue_delta(), grid_size=REPLAN_GRID_SIZE)
         old_left = {cid: max(self.target_budget[cid] - self.fact_cum_by_channel[cid], 0.0) for cid in self.channel_ids}
-        if self.hold_plan and h >= RESERVE_WARMUP_HOURS:
+        if self.hold_plan and h >= RESERVE_WARMUP_SHARE * self.horizon:
             wanted_reserve = remaining_budget - self._budget_to_use(models, remaining_budget)
             step = RESERVE_STEP_SHARE * remaining_budget
             self.reserve_rub = min(max(wanted_reserve, self.reserve_rub - step), self.reserve_rub + step, remaining_budget)
         else:
             self.reserve_rub = 0.0
         budget_to_use = remaining_budget - self.reserve_rub
+        # гистерезис: канал, получивший деньги в последние сутки, не отдаёт их обратно по шуму
+        # оценок; только слом (детектор, пауза) снимает защиту
+        recent_takers = {
+            cid for cid, t in self.last_taker_hour.items()
+            if h - t < CARD_MIN_INTERVAL_HOURS and not self.estimates[cid].shock_active and cid not in self.unavailable
+        }
+        locked = {cid: min(old_left[cid], budget_to_use) for cid in self.frozen_donors | recent_takers if cid in old_left}
+        # фиксация канала руками в брифе действует и в исполнении: зафиксированный канал не донор
+        # и не получатель, пока по нему не сработал детектор или он не встал на паузу
+        for cid in self.plan.brief.locked:
+            if cid in old_left and cid not in self.unavailable and not self.estimates[cid].shock_active:
+                locked[cid] = min(old_left[cid], budget_to_use)
+        if sum(locked.values()) > budget_to_use:
+            scale = budget_to_use / sum(locked.values())
+            locked = {cid: v * scale for cid, v in locked.items()}
         result = greedy_allocate(
-            models, budget_to_use, self.kpi, max_cost_per_kpi=self.plan.brief.max_cpa_rub, steps=REPLAN_STEPS
+            models, budget_to_use, self.kpi, locked=locked, max_cost_per_kpi=self.plan.brief.max_cpa_rub, steps=REPLAN_STEPS
         )
         new_left = dict(result.budgets)
 
-        # ограничитель: доля канала меняется не более чем на ±30 % за перерешение
+        # ограничитель: доля канала меняется не более чем на ±30 % за сутки, а не за каждое
+        # перерешение, иначе четыре перерешения в день дают четырёхкратный сдвиг по шуму первых часов
         total_old = sum(old_left.values()) or remaining_budget
+        if not self.share_anchor or h - self.anchor_hour >= 24:
+            self.share_anchor = {cid: (old_left[cid] / total_old if total_old > 0 else 0.0) for cid in self.channel_ids}
+            self.anchor_hour = h
         for cid in self.channel_ids:
             if cid in self.unavailable:
                 new_left[cid] = 0.0
                 continue
-            old_share = old_left[cid] / total_old if total_old > 0 else 0.0
+            if cid in locked:
+                continue
+            old_share = self.share_anchor.get(cid, old_left[cid] / total_old if total_old > 0 else 0.0)
             new_share = new_left[cid] / remaining_budget if remaining_budget > 0 else 0.0
-            lo, hi = old_share * (1 - SHARE_RATE_LIMIT), old_share * (1 + SHARE_RATE_LIMIT) + 0.01
+            lo, hi = old_share * (1 - SHARE_RATE_LIMIT), old_share * (1 + SHARE_RATE_LIMIT) + SHARE_FLOOR
+            if self.estimates[cid].shock_active:
+                lo = 0.0  # сломанный канал урезается сразу: плавность нужна для шума, а не для слома
             new_left[cid] = min(max(new_share, lo), hi) * remaining_budget
-        scale = budget_to_use / sum(new_left.values()) if sum(new_left.values()) > 0 else 1.0
-        new_left = {cid: v * scale for cid, v in new_left.items()}
+        # остаток после ограничений раздаётся только живым и не защищённым каналам:
+        # сломанный канал и канал с ожидающей карточкой не должны получать его пропорционально
+        adjustable = [
+            cid for cid in self.channel_ids
+            if cid not in self.unavailable and cid not in locked and not self.estimates[cid].shock_active
+        ] or [cid for cid in self.channel_ids if cid not in self.unavailable]
+        fixed = sum(v for cid, v in new_left.items() if cid not in adjustable)
+        adjustable_sum = sum(new_left[cid] for cid in adjustable)
+        scale = (budget_to_use - fixed) / adjustable_sum if adjustable_sum > 0 else 1.0
+        new_left = {cid: (v * scale if cid in adjustable else v) for cid, v in new_left.items()}
 
         self._emit_proposals(h, old_left, new_left, models, remaining_budget)
         for cid in self.channel_ids:
+            if new_left[cid] - old_left[cid] > PROPOSAL_MIN_SHARE * remaining_budget:
+                self.last_taker_hour[cid] = h
             self.target_budget[cid] = self.fact_cum_by_channel[cid] + new_left[cid]
 
     def _budget_to_use(self, models, remaining_budget: float) -> float:
@@ -424,62 +545,160 @@ class AdaptiveExecutor(BaseExecutor):
 
         Кейс просит удерживать факт на траектории плана, а не максимизировать KPI
         любой ценой, и меряет отклонение по расходу и по KPI с равным весом.
-        Опережение оценивается по факту, а не по прогнозу модели: r = факт / план
-        накопительно к текущему часу. Если остаток тратить по плану, KPI к концу
-        превысит план примерно в r раз; доля резерва s выбирается так, чтобы
-        относительный недорасход равнялся относительному перевыполнению:
-        r(1 − s) − 1 = s, откуда s = (r − 1) / (r + 1). Сумма двух отклонений
-        при этом минимальна.
+        Опережение оценивается по факту: r = факт / план накопительно к текущему
+        часу, и предполагается, что остаток плана по KPI придёт с тем же
+        опережением. Доля резерва s выбирается так, чтобы относительный недорасход
+        в конце равнялся относительному перевыполнению в конце:
+        u(s) = s·R / B, o(s) = (факт + r·план_остатка·(1 − s)^e) / план_всего − 1,
+        где R остаток бюджета, B бюджет плана, e локальная эластичность KPI по
+        расходу из модели (1 при линейном отклике; кривые вогнуты, e < 1, и
+        урезание расхода бьёт по KPI слабее). Прежняя формула s = (r − 1)/(r + 1)
+        считала всё в долях остатка и не учитывала уже накопленное перевыполнение,
+        поэтому в щедрых мирах резерв рос быстрее, чем гасил перевыполнение
+        (мир 2 стенда: −33 % по расходу при +13 % по KPI; запись 34).
         """
         _, plan_total = self._plan_cum(self.horizon)
         _, plan_to_date = self._plan_cum(self.hour)
-        if plan_total - self.fact_cum_kpi <= 0:
-            return 0.0
-        if plan_to_date <= 0 or self.fact_cum_kpi <= 0:
+        if plan_to_date <= 0 or self.fact_cum_kpi <= 0 or plan_total <= 0:
             return remaining_budget
         ratio = self.fact_cum_kpi / plan_to_date
-        if ratio <= 1 + DEAD_ZONE:
+        if ratio <= 1 + DEAD_ZONE and self.fact_cum_kpi < plan_total:
             return remaining_budget
-        share = (ratio - 1) / (ratio + 1)
-        return remaining_budget * (1 - share)
+        plan_left = max(plan_total - plan_to_date, 0.0)
+        budget_total = self.plan.total_budget_rub or remaining_budget
+        elasticity = RESERVE_ELASTICITY
+
+        def overshoot(s: float) -> float:
+            return (self.fact_cum_kpi + ratio * plan_left * (1 - s) ** elasticity) / plan_total - 1
+
+        if overshoot(0.0) <= 0:
+            return remaining_budget
+        # reserve_balance = 1: перевыполнение равно недорасходу (оба отклонения кейса равны);
+        # reserve_balance = 0: ожидаемое перевыполнение ноль, весь запас возвращается рекламодателю
+        lo, hi = 0.0, 1.0
+        for _ in range(RESERVE_BISECTION_STEPS):
+            mid = (lo + hi) / 2
+            if overshoot(mid) > self.reserve_balance * mid * remaining_budget / budget_total:
+                lo = mid
+            else:
+                hi = mid
+        return remaining_budget * (1 - (lo + hi) / 2)
+
+    def _remaining_elasticity(self, models, remaining_budget: float) -> float:
+        """Локальная эластичность KPI остатка по расходу: log-отношение модельного KPI при полном
+        остатке и при остатке, урезанном на шаг резерва. Единица означает линейный отклик."""
+        full = greedy_allocate(models, remaining_budget, self.kpi, steps=REPLAN_STEPS)
+        cut_budget = remaining_budget * (1 - RESERVE_STEP_SHARE)
+        cut = greedy_allocate(models, cut_budget, self.kpi, steps=REPLAN_STEPS)
+        kpi_full = sum(models[cid].value(b, self.kpi) for cid, b in full.budgets.items())
+        kpi_cut = sum(models[cid].value(b, self.kpi) for cid, b in cut.budgets.items())
+        if kpi_full <= 0 or kpi_cut <= 0 or cut_budget <= 0:
+            return 1.0
+        e = math.log(kpi_full / kpi_cut) / math.log(remaining_budget / cut_budget)
+        return min(max(e, 0.0), 1.0)  # отклик не круче линейного: кривые вогнуты по построению
+
+    def _emit_hold_cards(self, h: int, deltas: dict, models, old_left: dict, remaining_budget: float) -> None:
+        """Слом есть, а переноса нет: человек всё равно должен увидеть карточку с объяснением.
+
+        Так бывает, когда остальные каналы у потолка ёмкости и деньги некуда деть,
+        или когда рост CTR не засчитан до подтверждения конверсиями. Карточка с нулевой
+        суммой честно говорит: «держим, пересматриваем каждые 6 часов».
+        """
+        for cid in self.channel_ids:
+            est = self.estimates[cid]
+            if not est.shock_active:
+                self.hold_cards.discard(cid)
+                continue
+            if cid in self.hold_cards or deltas.get(cid, 0.0) < 0 or cid in self.unavailable:
+                continue
+            self.hold_cards.add(cid)
+            saturated = [c for c in self.channel_ids if c != cid and old_left.get(c, 0.0) >= models[c].max_budget * SATURATION_TOLERANCE]
+            if est.last_event == "rise":
+                cause, kind = f"клики {cid} выросли при прежней цене и без роста конверсий: похоже на фрод, детектор в час {self.detection_hours.get(cid, h)}", "rise"
+                decision = "деньги в канал не добавляем, пока рост не подтвердится конверсиями"
+            else:
+                cause, kind = f"отдача {cid} на рубль упала, детектор сработал в час {self.detection_hours.get(cid, h)}", "drop"
+                decision = (
+                    f"перенос невыгоден: {', '.join(saturated)} у потолка ёмкости, деньгам некуда уйти"
+                    if saturated else "перенос пока невыгоден: остальные каналы дают не больше на рубль"
+                )
+            self.proposals.append(
+                Proposal(
+                    hour=h, from_channel=cid, to_channel=cid, amount_rub=0.0, cause=cause,
+                    cost_of_decision=f"держим бюджет {cid}: {decision}; пересматриваем каждые {REPLAN_EVERY_HOURS} часов",
+                    cost_of_inaction="бездействие и есть решение: цена та же",
+                    cpa_delta_pct=0.0, inaction_kpi_shortfall_pct=0.0, inaction_kpi_shortfall_abs=0.0,
+                    cause_kind=kind, applied_by="system",
+                )
+            )
+            self.events.append(f"час {h}: {cause}; {decision}")
 
     def _emit_proposals(self, h: int, old_left: dict, new_left: dict, models, remaining_budget: float) -> None:
         deltas = {cid: new_left[cid] - old_left[cid] for cid in self.channel_ids}
         donors = sorted((cid for cid in deltas if deltas[cid] < 0), key=lambda c: deltas[c])
         takers = sorted((cid for cid in deltas if deltas[cid] > 0), key=lambda c: -deltas[c])
+        self._emit_hold_cards(h, deltas, models, old_left, remaining_budget)
         if not donors or not takers:
             return
+        # сломанный канал идёт первым и без порога по сумме: человек должен увидеть карточку в час слома
+        broken = [cid for cid in donors if self.estimates[cid].shock_active or cid in self.unavailable]
+        if broken:
+            donors = broken + [cid for cid in donors if cid not in broken]
         kpi_old = sum(models[cid].value(min(old_left[cid], models[cid].max_budget), self.kpi) for cid in self.channel_ids)
         kpi_new = sum(models[cid].value(min(new_left[cid], models[cid].max_budget), self.kpi) for cid in self.channel_ids)
         cpa_old = remaining_budget / kpi_old if kpi_old > 0 else None
         cpa_new = remaining_budget / kpi_new if kpi_new > 0 else None
         cpa_delta = ((cpa_new - cpa_old) / cpa_old * 100) if cpa_old and cpa_new else None
         _, plan_kpi_total = self._plan_cum(self.horizon)
-        plan_left = max(plan_kpi_total - self.fact_cum_kpi, 0.0)
-        shortfall = ((plan_left - kpi_old) / plan_left * 100) if plan_left > 0 else None
+        # цена бездействия это эффект самого хода: сколько KPI к концу даёт новое распределение
+        # остатка против старого, в единицах KPI и в долях всего плана (ревью 06.09: раньше
+        # здесь стоял недобор всего плана, и перенос на 6 ₽ «стоил» 26 % плана)
+        shortfall_abs = max(kpi_new - kpi_old, 0.0)
+        shortfall = (shortfall_abs / plan_kpi_total * 100) if plan_kpi_total > 0 else None
         limit = self.plan.brief.automation_limit_rub
 
-        for donor in donors[:1]:  # одна карточка на перерешение: самый крупный перенос
+        for donor in donors[:1]:  # одна карточка на перерешение: сломанный канал или самый крупный перенос
             amount = -deltas[donor]
-            if amount < PROPOSAL_MIN_SHARE * remaining_budget:
+            forced = donor in broken
+            if amount < PROPOSAL_MIN_SHARE * remaining_budget and not forced:
                 continue
             taker = takers[0]
             est = self.estimates[donor]
             if donor in self.unavailable:
-                cause = f"{donor} не отдаёт показы"
+                cause, kind = f"{donor} не отдаёт показы", "pause"
+            elif est.shock_active and est.last_event == "rise":
+                cause, kind = f"клики {donor} выросли при прежней цене и без роста конверсий: похоже на фрод, детектор в час {self.detection_hours.get(donor, h)}", "rise"
             elif est.shock_active:
-                cause = f"отдача {donor} на рубль упала, детектор сработал в час {self.detection_hours.get(donor, h)}"
+                cause, kind = f"отдача {donor} на рубль упала, детектор сработал в час {self.detection_hours.get(donor, h)}", "drop"
             else:
-                cause = f"по факту {taker} даёт больше KPI на рубль, чем {donor}"
+                cause, kind = f"по факту {taker} даёт больше KPI на рубль, чем {donor}", "fact"
             applied_by = "system"
-            if limit is not None and amount > limit:
-                self.human_requests += 1
+            if h in self.rejected_hours:
+                applied_by = "rejected"
+            elif limit is not None and amount > limit:
                 if self.auto_apply_above_limit:
                     applied_by = "system"
                 elif h in self.approved_hours:
                     applied_by = "human"
                 else:
                     applied_by = "pending"
+            if applied_by == "pending" and donor in self.frozen_donors:
+                # по этому донору карточка уже ждёт решения: не переиздаём её каждое перерешение
+                # (пауза канала без автоприменения давала 13 одинаковых карточек), деньги остаются
+                new_left[taker] -= amount
+                new_left[donor] += amount
+                continue
+            if applied_by in ("pending", "human"):
+                self.human_requests += 1
+            if applied_by == "system" and not forced:
+                # перенос по факту применяется сразу, а карточка о нём копится: не чаще раза в
+                # сутки на канал и не мельче порога, иначе человек читает один перенос по частям
+                self.uncarded_rub[donor] = self.uncarded_rub.get(donor, 0.0) + amount
+                if h - self.last_card_hour.get(donor, -CARD_MIN_INTERVAL_HOURS) < CARD_MIN_INTERVAL_HOURS or self.uncarded_rub[donor] < PROPOSAL_MIN_SHARE * remaining_budget:
+                    continue
+                amount = self.uncarded_rub[donor]
+            self.uncarded_rub[donor] = 0.0
+            self.last_card_hour[donor] = h
             self.proposals.append(
                 Proposal(
                     hour=h,
@@ -489,20 +708,25 @@ class AdaptiveExecutor(BaseExecutor):
                     cause=cause,
                     cost_of_decision=(f"CPA на остатке изменится на {cpa_delta:+.1f} %" if cpa_delta is not None else "CPA не оценён"),
                     cost_of_inaction=(
-                        f"без хода недоберём {shortfall:.0f} % {self.kpi} к концу"
-                        if shortfall is not None and shortfall > 0
-                        else "без хода план выполняется; ход экономит бюджет"
+                        f"без хода недоберём {num(shortfall_abs)} {kpi_label(self.kpi)} к концу ({shortfall:.1f} % плана)"
+                        if shortfall is not None and shortfall_abs >= 1
+                        else "без хода KPI к концу тот же; ход экономит бюджет или снижает CPA"
                     ),
                     cpa_delta_pct=cpa_delta,
                     inaction_kpi_shortfall_pct=shortfall,
+                    inaction_kpi_shortfall_abs=shortfall_abs,
+                    cause_kind=kind,
                     applied_by=applied_by,
                 )
             )
             self.events.append(f"час {h}: предложение перенести {amount:,.0f} ₽ из {donor} в {taker}: {cause}")
-            if applied_by == "pending":
-                # человек ещё не решил: ход не применяем, деньги остаются у донора
+            self.hold_cards.add(donor)  # по этому слому карточка уже есть, «держим» не нужна
+            if applied_by in ("pending", "rejected"):
+                # человек не одобрил: ход не применяем, деньги остаются у донора, и донор заморожен,
+                # чтобы автоматика не добрала тот же перенос частями ниже лимита
                 new_left[taker] -= amount
                 new_left[donor] += amount
+                self.frozen_donors.add(donor)
 
 
 POLICIES = {
