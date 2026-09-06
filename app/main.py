@@ -244,7 +244,7 @@ class RunRequest(ShocksMixin):
 
 class DecideRequest(BaseModel):
     hour: int
-    decision: Literal["approve", "decline"]
+    decision: Literal["approve", "decline", "undo"]  # undo — отменить своё одобрение: перепрогон без этого часа
 
 
 class DegradationRequest(BaseModel):
@@ -405,9 +405,9 @@ def _run(req: RunRequest, decisions: dict[int, str] | None = None) -> dict[str, 
 
 @app.post("/api/run/{run_id}/decide")
 def decide(run_id: str, req: DecideRequest) -> dict[str, Any]:
-    """Человек в контуре: одобрить или отклонить ход выше лимита полномочий.
+    """Человек в контуре: одобрить, отклонить перенос выше лимита или отменить своё одобрение.
 
-    Одобрение перепрогоняет ту же кампанию на тех же зёрнах (общие случайные
+    Одобрение и откат перепрогоняют ту же кампанию на тех же зёрнах (общие случайные
     числа), поэтому разница итогов это цена решения по факту, а не оценка.
     """
     try:
@@ -420,12 +420,20 @@ def decide(run_id: str, req: DecideRequest) -> dict[str, Any]:
         raise HTTPException(422, f"в час {req.hour} карточки переноса нет")
     decisions = {int(k): v for k, v in prev_view["decisions"].items()}
     if req.decision == "decline" and req.hour in prev_req.approved_hours:
-        raise HTTPException(422, f"перенос часа {req.hour} уже сделан по вашему решению; отменить его можно только новым прогоном")
-    decisions[req.hour] = req.decision
-    if req.decision == "decline":
-        prev_view["decisions"] = decisions
-        return {**prev_view, "effect": None}
-    new_req = prev_req.model_copy(update={"approved_hours": sorted(set(prev_req.approved_hours) | {req.hour})})
+        raise HTTPException(422, f"перенос часа {req.hour} уже сделан по вашему решению; отменить его можно кнопкой «Отменить мой перенос»")
+    if req.decision == "undo":
+        # откат собственного одобрения: та же кампания на тех же зёрнах, но без этого часа в approved_hours;
+        # переносы автоматики откатить нельзя — они не решение человека
+        if req.hour not in prev_req.approved_hours:
+            raise HTTPException(422, f"перенос часа {req.hour} не был сделан по вашему решению — отменять нечего")
+        decisions.pop(req.hour, None)
+        new_req = prev_req.model_copy(update={"approved_hours": sorted(set(prev_req.approved_hours) - {req.hour})})
+    else:
+        decisions[req.hour] = req.decision
+        if req.decision == "decline":
+            prev_view["decisions"] = decisions
+            return {**prev_view, "effect": None}
+        new_req = prev_req.model_copy(update={"approved_hours": sorted(set(prev_req.approved_hours) | {req.hour})})
     view = _run(new_req, decisions)
     before, after = prev_view["verdict"], view["verdict"]
     view["effect"] = {
