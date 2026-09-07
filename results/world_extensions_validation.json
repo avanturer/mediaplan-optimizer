@@ -1,0 +1,458 @@
+{
+  "stable": {
+    "static": {
+      "strategy": "static",
+      "n": 30,
+      "mean": {
+        "mape_spend": 0.017758416464397898,
+        "mape_kpi": 0.24086725417710858,
+        "wape_spend": 0.017740052177544246,
+        "wape_kpi": 0.23817433991522793,
+        "final_deviation_spend": 0.017599351349416203,
+        "final_deviation_kpi": 0.23252124251897965,
+        "unsmoothness": 0.017599351349416276,
+        "lambda_cv": 0.0
+      },
+      "std": {
+        "mape_spend": 0.01906474853250148,
+        "mape_kpi": 0.24915949461886414,
+        "wape_spend": 0.019086759119155767,
+        "wape_kpi": 0.2450516633734162,
+        "final_deviation_spend": 0.019057974222809818,
+        "final_deviation_kpi": 0.2343386072331283,
+        "unsmoothness": 0.019057974222809772,
+        "lambda_cv": 0.0
+      },
+      "ci95": {
+        "mape_spend": 0.006822232645284187,
+        "mape_kpi": 0.08916058007130144,
+        "wape_spend": 0.0068301090325629775,
+        "wape_kpi": 0.08769061153873793,
+        "final_deviation_spend": 0.00681980848969415,
+        "final_deviation_kpi": 0.08385699363360606,
+        "unsmoothness": 0.0068198084896941335,
+        "lambda_cv": 0.0
+      },
+      "paired_delta_vs_static": {},
+      "win_rate_vs_static": {},
+      "mean_actual_kpi": 2479.1,
+      "mean_actual_spend": 1178880.7783806997,
+      "post_shock_cumulative_kpi_wape": {
+        "mean": 0.23607643257587135,
+        "std": 0.2419286914817514
+      },
+      "post_shock_cumulative_kpi_mae": {
+        "mean": 418.45924362255715,
+        "std": 428.8327138098065
+      },
+      "constraint_violations": 0
+    },
+    "adaptive": {
+      "strategy": "adaptive",
+      "n": 30,
+      "mean": {
+        "mape_spend": 0.056394891759247064,
+        "mape_kpi": 0.23957141689991132,
+        "wape_spend": 0.0715461771453499,
+        "wape_kpi": 0.21214451107959795,
+        "final_deviation_spend": 0.13432273238527911,
+        "final_deviation_kpi": 0.11617635789069626,
+        "unsmoothness": 0.22231664392550118,
+        "lambda_cv": 0.0272273267494015
+      },
+      "std": {
+        "mape_spend": 0.06554915840741506,
+        "mape_kpi": 0.2052985726257578,
+        "wape_spend": 0.09158651386318266,
+        "wape_kpi": 0.16904499855402572,
+        "final_deviation_spend": 0.16723318178995272,
+        "final_deviation_kpi": 0.09428407602406307,
+        "unsmoothness": 0.13655236264518167,
+        "lambda_cv": 0.03040885122869045
+      },
+      "ci95": {
+        "mape_spend": 0.023456465087677483,
+        "mape_kpi": 0.07346515071048357,
+        "wape_spend": 0.0327738130760015,
+        "wape_kpi": 0.06049197584175914,
+        "final_deviation_spend": 0.0598436255394166,
+        "final_deviation_kpi": 0.033739123297915403,
+        "unsmoothness": 0.048864635410242656,
+        "lambda_cv": 0.010881667660304664
+      },
+      "paired_delta_vs_static": {
+        "mape_spend": 0.038636475294849176,
+        "mape_kpi": -0.0012958372771972456,
+        "wape_spend": 0.05380612496780566,
+        "wape_kpi": -0.026029828835629917,
+        "final_deviation_spend": 0.1167233810358629,
+        "final_deviation_kpi": -0.11634488462828335,
+        "unsmoothness": 0.2047172925760849,
+        "lambda_cv": 0.0272273267494015
+      },
+      "win_rate_vs_static": {
+        "mape_spend": 0.26666666666666666,
+        "mape_kpi": 0.43333333333333335,
+        "wape_spend": 0.3,
+        "wape_kpi": 0.6333333333333333,
+        "final_deviation_spend": 0.4,
+        "final_deviation_kpi": 0.8,
+        "unsmoothness": 0.0,
+        "lambda_cv": 0.0
+      },
+      "mean_actual_kpi": 2306.0666666666666,
+      "mean_actual_spend": 1038812.7211376644,
+      "post_shock_cumulative_kpi_wape": {
+        "mean": 0.18967680637088563,
+        "std": 0.1408602436926702
+      },
+      "post_shock_cumulative_kpi_mae": {
+        "mean": 336.2132003633786,
+        "std": 249.6829962608829
+      },
+      "constraint_violations": 0
+    }
+  },
+  "fraud_surge": {
+    "static": {
+      "strategy": "static",
+      "n": 30,
+      "mean": {
+        "mape_spend": 0.017758416464397898,
+        "mape_kpi": 0.24090302195191066,
+        "wape_spend": 0.017740052177544246,
+        "wape_kpi": 0.23821845753844306,
+        "final_deviation_spend": 0.017599351349416203,
+        "final_deviation_kpi": 0.232704975725191,
+        "unsmoothness": 0.017599351349416276,
+        "lambda_cv": 0.0
+      },
+      "std": {
+        "mape_spend": 0.01906474853250148,
+        "mape_kpi": 0.24795190626253963,
+        "wape_spend": 0.019086759119155767,
+        "wape_kpi": 0.2434334410120666,
+        "final_deviation_spend": 0.019057974222809818,
+        "final_deviation_kpi": 0.23249831743213056,
+        "unsmoothness": 0.019057974222809772,
+        "lambda_cv": 0.0
+      },
+      "ci95": {
+        "mape_spend": 0.006822232645284187,
+        "mape_kpi": 0.08872845012778095,
+        "wape_spend": 0.0068301090325629775,
+        "wape_kpi": 0.08711153810369592,
+        "final_deviation_spend": 0.00681980848969415,
+        "final_deviation_kpi": 0.08319845438585534,
+        "unsmoothness": 0.0068198084896941335,
+        "lambda_cv": 0.0
+      },
+      "paired_delta_vs_static": {},
+      "win_rate_vs_static": {},
+      "mean_actual_kpi": 2472.1,
+      "mean_actual_spend": 1178880.7783806997,
+      "post_shock_cumulative_kpi_wape": {
+        "mean": 0.23613507029436123,
+        "std": 0.23983384018905382
+      },
+      "post_shock_cumulative_kpi_mae": {
+        "mean": 418.5631823980601,
+        "std": 425.1194677314956
+      },
+      "constraint_violations": 0
+    },
+    "adaptive": {
+      "strategy": "adaptive",
+      "n": 30,
+      "mean": {
+        "mape_spend": 0.056158149969216725,
+        "mape_kpi": 0.2394134288397535,
+        "wape_spend": 0.07114032163293359,
+        "wape_kpi": 0.21197178835915217,
+        "final_deviation_spend": 0.1328395703314335,
+        "final_deviation_kpi": 0.11736775559208938,
+        "unsmoothness": 0.22170484488885273,
+        "lambda_cv": 0.0272273267494015
+      },
+      "std": {
+        "mape_spend": 0.0656081140606004,
+        "mape_kpi": 0.20478867854807678,
+        "wape_spend": 0.09172334846104972,
+        "wape_kpi": 0.16843123543517505,
+        "final_deviation_spend": 0.1674179748338056,
+        "final_deviation_kpi": 0.09434772392431769,
+        "unsmoothness": 0.13686793460550972,
+        "lambda_cv": 0.03040885122869045
+      },
+      "ci95": {
+        "mape_spend": 0.02347756209722363,
+        "mape_kpi": 0.07328268745813789,
+        "wape_spend": 0.03282277870798881,
+        "wape_kpi": 0.06027234353038844,
+        "final_deviation_spend": 0.059909752880894264,
+        "final_deviation_kpi": 0.03376189940651084,
+        "unsmoothness": 0.048977561385952016,
+        "lambda_cv": 0.010881667660304664
+      },
+      "paired_delta_vs_static": {
+        "mape_spend": 0.03839973350481883,
+        "mape_kpi": -0.0014895931121571863,
+        "wape_spend": 0.053400269455389344,
+        "wape_kpi": -0.026246669179290916,
+        "final_deviation_spend": 0.11524021898201729,
+        "final_deviation_kpi": -0.11533722013310162,
+        "unsmoothness": 0.20410549353943644,
+        "lambda_cv": 0.0272273267494015
+      },
+      "win_rate_vs_static": {
+        "mape_spend": 0.26666666666666666,
+        "mape_kpi": 0.43333333333333335,
+        "wape_spend": 0.3,
+        "wape_kpi": 0.6333333333333333,
+        "final_deviation_spend": 0.4,
+        "final_deviation_kpi": 0.8,
+        "unsmoothness": 0.0,
+        "lambda_cv": 0.0
+      },
+      "mean_actual_kpi": 2303.766666666667,
+      "mean_actual_spend": 1040592.5156022791,
+      "post_shock_cumulative_kpi_wape": {
+        "mean": 0.18944723674495856,
+        "std": 0.1402469248510328
+      },
+      "post_shock_cumulative_kpi_mae": {
+        "mean": 335.8062748139876,
+        "std": 248.59585284817246
+      },
+      "constraint_violations": 0
+    }
+  },
+  "sms_weekly_limit": {
+    "static": {
+      "strategy": "static",
+      "n": 30,
+      "mean": {
+        "mape_spend": 0.017758416464397898,
+        "mape_kpi": 0.24086725417710858,
+        "wape_spend": 0.017740052177544246,
+        "wape_kpi": 0.23817433991522793,
+        "final_deviation_spend": 0.017599351349416203,
+        "final_deviation_kpi": 0.23252124251897965,
+        "unsmoothness": 0.017599351349416276,
+        "lambda_cv": 0.0
+      },
+      "std": {
+        "mape_spend": 0.01906474853250148,
+        "mape_kpi": 0.24915949461886414,
+        "wape_spend": 0.019086759119155767,
+        "wape_kpi": 0.2450516633734162,
+        "final_deviation_spend": 0.019057974222809818,
+        "final_deviation_kpi": 0.2343386072331283,
+        "unsmoothness": 0.019057974222809772,
+        "lambda_cv": 0.0
+      },
+      "ci95": {
+        "mape_spend": 0.006822232645284187,
+        "mape_kpi": 0.08916058007130144,
+        "wape_spend": 0.0068301090325629775,
+        "wape_kpi": 0.08769061153873793,
+        "final_deviation_spend": 0.00681980848969415,
+        "final_deviation_kpi": 0.08385699363360606,
+        "unsmoothness": 0.0068198084896941335,
+        "lambda_cv": 0.0
+      },
+      "paired_delta_vs_static": {},
+      "win_rate_vs_static": {},
+      "mean_actual_kpi": 2479.1,
+      "mean_actual_spend": 1178880.7783806997,
+      "post_shock_cumulative_kpi_wape": {
+        "mean": 0.2366898564229366,
+        "std": 0.24343448375705184
+      },
+      "post_shock_cumulative_kpi_mae": {
+        "mean": 383.9127784937326,
+        "std": 394.8526162158787
+      },
+      "constraint_violations": 0
+    },
+    "adaptive": {
+      "strategy": "adaptive",
+      "n": 30,
+      "mean": {
+        "mape_spend": 0.058574160111873254,
+        "mape_kpi": 0.23912826051687944,
+        "wape_spend": 0.07447902032800231,
+        "wape_kpi": 0.21152107378997456,
+        "final_deviation_spend": 0.13420373530664473,
+        "final_deviation_kpi": 0.11722066945611494,
+        "unsmoothness": 0.23338078244088045,
+        "lambda_cv": 0.04276919757895271
+      },
+      "std": {
+        "mape_spend": 0.06521365261553189,
+        "mape_kpi": 0.2052772720247318,
+        "wape_spend": 0.09131067205043726,
+        "wape_kpi": 0.16903731657863486,
+        "final_deviation_spend": 0.1685490354057446,
+        "final_deviation_kpi": 0.09419275514212369,
+        "unsmoothness": 0.129473118984146,
+        "lambda_cv": 0.05056085203600392
+      },
+      "ci95": {
+        "mape_spend": 0.023336405881957293,
+        "mape_kpi": 0.07345752838829893,
+        "wape_spend": 0.03267510435101424,
+        "wape_kpi": 0.06048922688217006,
+        "final_deviation_spend": 0.06031449770847597,
+        "final_deviation_kpi": 0.03370644454000256,
+        "unsmoothness": 0.0463313606006692,
+        "lambda_cv": 0.018092968535376227
+      },
+      "paired_delta_vs_static": {
+        "mape_spend": 0.04081574364747536,
+        "mape_kpi": -0.0017389936602291791,
+        "wape_spend": 0.05673896815045806,
+        "wape_kpi": -0.02665326612525331,
+        "final_deviation_spend": 0.11660438395722852,
+        "final_deviation_kpi": -0.1153005730628647,
+        "unsmoothness": 0.21578143109146414,
+        "lambda_cv": 0.04276919757895271
+      },
+      "win_rate_vs_static": {
+        "mape_spend": 0.26666666666666666,
+        "mape_kpi": 0.4,
+        "wape_spend": 0.23333333333333334,
+        "wape_kpi": 0.5666666666666667,
+        "final_deviation_spend": 0.4,
+        "final_deviation_kpi": 0.7666666666666667,
+        "unsmoothness": 0.0,
+        "lambda_cv": 0.0
+      },
+      "mean_actual_kpi": 2307.4333333333334,
+      "mean_actual_spend": 1038955.5176320258,
+      "post_shock_cumulative_kpi_wape": {
+        "mean": 0.19833599233200688,
+        "std": 0.15390849792943936
+      },
+      "post_shock_cumulative_kpi_mae": {
+        "mean": 321.7025141771713,
+        "std": 249.6407745007279
+      },
+      "constraint_violations": 0
+    }
+  },
+  "competition": {
+    "static": {
+      "strategy": "static",
+      "n": 30,
+      "mean": {
+        "mape_spend": 0.017768430615171256,
+        "mape_kpi": 0.23375018894451924,
+        "wape_spend": 0.017755821840561625,
+        "wape_kpi": 0.2280245502223326,
+        "final_deviation_spend": 0.017629090825656217,
+        "final_deviation_kpi": 0.2191875109016248,
+        "unsmoothness": 0.01762909082565626,
+        "lambda_cv": 0.0
+      },
+      "std": {
+        "mape_spend": 0.019073815495333903,
+        "mape_kpi": 0.22479097387344463,
+        "wape_spend": 0.019101366189758197,
+        "wape_kpi": 0.2114340753102557,
+        "final_deviation_spend": 0.019083115814809665,
+        "final_deviation_kpi": 0.17959136375492393,
+        "unsmoothness": 0.019083115814809634,
+        "lambda_cv": 0.0
+      },
+      "ci95": {
+        "mape_spend": 0.006825477216264155,
+        "mape_kpi": 0.08044041691450617,
+        "wape_spend": 0.006835336105647419,
+        "wape_kpi": 0.07566071214881312,
+        "final_deviation_spend": 0.00682880529284649,
+        "final_deviation_kpi": 0.06426594416030251,
+        "unsmoothness": 0.006828805292846479,
+        "lambda_cv": 0.0
+      },
+      "paired_delta_vs_static": {},
+      "win_rate_vs_static": {},
+      "mean_actual_kpi": 2229.633333333333,
+      "mean_actual_spend": 1178845.0910092115,
+      "post_shock_cumulative_kpi_wape": {
+        "mean": 0.2225861203747737,
+        "std": 0.20078621602923258
+      },
+      "post_shock_cumulative_kpi_mae": {
+        "mean": 394.5468785537179,
+        "std": 355.9052768320066
+      },
+      "constraint_violations": 0
+    },
+    "adaptive": {
+      "strategy": "adaptive",
+      "n": 30,
+      "mean": {
+        "mape_spend": 0.05144106735472878,
+        "mape_kpi": 0.23681001273940191,
+        "wape_spend": 0.06330849142626599,
+        "wape_kpi": 0.20895958134061435,
+        "final_deviation_spend": 0.1078045680804712,
+        "final_deviation_kpi": 0.13167150892433535,
+        "unsmoothness": 0.21438833625057943,
+        "lambda_cv": 0.04171154351385879
+      },
+      "std": {
+        "mape_spend": 0.06404747495306422,
+        "mape_kpi": 0.19858026036981064,
+        "wape_spend": 0.08964184186511451,
+        "wape_kpi": 0.16114777551922502,
+        "final_deviation_spend": 0.16418493432798548,
+        "final_deviation_kpi": 0.10222596430162877,
+        "unsmoothness": 0.13150522562277056,
+        "lambda_cv": 0.09359284299046647
+      },
+      "ci95": {
+        "mape_spend": 0.02291909456491973,
+        "mape_kpi": 0.07106103354546571,
+        "wape_spend": 0.032077921138745004,
+        "wape_kpi": 0.057665990872523436,
+        "final_deviation_spend": 0.05875282419417541,
+        "final_deviation_kpi": 0.036581091519003676,
+        "unsmoothness": 0.04705854062221989,
+        "lambda_cv": 0.033491768733586266
+      },
+      "paired_delta_vs_static": {
+        "mape_spend": 0.03367263673955753,
+        "mape_kpi": 0.0030598237948826737,
+        "wape_spend": 0.04555266958570437,
+        "wape_kpi": -0.019064968881718262,
+        "final_deviation_spend": 0.09017547725481499,
+        "final_deviation_kpi": -0.0875160019772895,
+        "unsmoothness": 0.19675924542492323,
+        "lambda_cv": 0.04171154351385879
+      },
+      "win_rate_vs_static": {
+        "mape_spend": 0.3,
+        "mape_kpi": 0.43333333333333335,
+        "wape_spend": 0.3333333333333333,
+        "wape_kpi": 0.5333333333333333,
+        "final_deviation_spend": 0.43333333333333335,
+        "final_deviation_kpi": 0.8333333333333334,
+        "unsmoothness": 0.0,
+        "lambda_cv": 0.0
+      },
+      "mean_actual_kpi": 2192.6,
+      "mean_actual_spend": 1070634.5183034337,
+      "post_shock_cumulative_kpi_wape": {
+        "mean": 0.18544364511164052,
+        "std": 0.13428057213810554
+      },
+      "post_shock_cumulative_kpi_mae": {
+        "mean": 328.7096751730497,
+        "std": 238.02014473451084
+      },
+      "constraint_violations": 0
+    }
+  }
+}

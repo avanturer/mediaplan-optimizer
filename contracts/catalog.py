@@ -12,6 +12,8 @@ from enum import StrEnum
 
 from pydantic import BaseModel, Field, field_validator
 
+from contracts.targeting import AudienceTargeting
+
 
 class ChannelFamily(StrEnum):
     """Три семейства поведения вместо восьми копий логики (контракт мира, §4)."""
@@ -92,6 +94,7 @@ class PublicCatalog(BaseModel):
 
     catalog_id: str = Field(description="хэш содержимого; seed мира сюда не попадает")
     version: str = "1.0"
+    targeting: AudienceTargeting = Field(default_factory=AudienceTargeting)
     channels: list[CatalogChannel] = Field(min_length=1)
 
     def by_id(self, channel_id: str) -> CatalogChannel:

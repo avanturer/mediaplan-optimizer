@@ -1,0 +1,2471 @@
+{
+  "model_id": "eedf27b74bc364d7",
+  "training": {
+    "version": "ml-v1",
+    "training_worlds": 24,
+    "validation_worlds": 8,
+    "quality_training_rows": 13958,
+    "quality_validation_rows": 4496,
+    "positive_training_rows": 399,
+    "response_episodes": 24,
+    "synthetic": true
+  },
+  "evaluation_seeds": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30
+  ],
+  "scenarios": {
+    "stable": {
+      "metrics": {
+        "static": {
+          "actual_kpi": {
+            "mean": 2479.1,
+            "std": 722.78390675365
+          },
+          "spend": {
+            "mean": 1178880.7783806997,
+            "std": 22869.569067371765
+          },
+          "wape_kpi": {
+            "mean": 0.23817433991522793,
+            "std": 0.2450516633734162
+          },
+          "mape_kpi": {
+            "mean": 0.24086725417710858,
+            "std": 0.24915949461886414
+          },
+          "final_deviation_kpi": {
+            "mean": 0.23252124251897965,
+            "std": 0.2343386072331283
+          },
+          "final_absolute_error": {
+            "mean": 526.950282065462,
+            "std": 531.0688771596642
+          },
+          "post_shock_wape": {
+            "mean": 0.23607643257587135,
+            "std": 0.2419286914817514
+          },
+          "post_shock_mae": {
+            "mean": 418.45924362255715,
+            "std": 428.8327138098065
+          },
+          "constraint_violations": 0
+        },
+        "adaptive_without_ml": {
+          "actual_kpi": {
+            "mean": 2306.0666666666666,
+            "std": 340.1818918464501
+          },
+          "spend": {
+            "mean": 1038812.7211376644,
+            "std": 200679.8181479431
+          },
+          "wape_kpi": {
+            "mean": 0.21214451107959795,
+            "std": 0.16904499855402572
+          },
+          "mape_kpi": {
+            "mean": 0.23957141689991132,
+            "std": 0.2052985726257578
+          },
+          "final_deviation_kpi": {
+            "mean": 0.11617635789069626,
+            "std": 0.09428407602406307
+          },
+          "final_absolute_error": {
+            "mean": 263.28417952971944,
+            "std": 213.67088837531088
+          },
+          "post_shock_wape": {
+            "mean": 0.18967680637088563,
+            "std": 0.14086024369267017
+          },
+          "post_shock_mae": {
+            "mean": 336.2132003633786,
+            "std": 249.6829962608829
+          },
+          "constraint_violations": 0
+        },
+        "adaptive_ml": {
+          "actual_kpi": {
+            "mean": 2281.266666666667,
+            "std": 346.09555520597684
+          },
+          "spend": {
+            "mean": 1054869.9842717543,
+            "std": 184262.99270280218
+          },
+          "wape_kpi": {
+            "mean": 0.20039862376145132,
+            "std": 0.1559995907659314
+          },
+          "mape_kpi": {
+            "mean": 0.2205688161638074,
+            "std": 0.18563582735600515
+          },
+          "final_deviation_kpi": {
+            "mean": 0.12012549617785377,
+            "std": 0.09187153086002141
+          },
+          "final_absolute_error": {
+            "mean": 272.23389746425744,
+            "std": 208.20346810473654
+          },
+          "post_shock_wape": {
+            "mean": 0.18390526568931964,
+            "std": 0.13342150575247427
+          },
+          "post_shock_mae": {
+            "mean": 325.9828079358382,
+            "std": 236.49739946921505
+          },
+          "constraint_violations": 0
+        }
+      },
+      "paired_wape_delta": {
+        "mean": -0.011745887318146611,
+        "std": 0.030767032265909478
+      },
+      "runs": {
+        "static": [
+          {
+            "seed": 1,
+            "actual_kpi": 2148.0,
+            "spend": 1133169.1358582089,
+            "wape_kpi": 0.05345360640693431,
+            "mape_kpi": 0.051046060892394246,
+            "final_deviation_kpi": 0.05217693978058859,
+            "final_absolute_error": 118.2457690180695,
+            "post_shock_wape": 0.05701268865626333,
+            "post_shock_mae": 101.05831535861113,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 2,
+            "actual_kpi": 3088.0,
+            "spend": 1195804.9668374823,
+            "wape_kpi": 0.3882406439663152,
+            "mape_kpi": 0.39426410805239154,
+            "final_deviation_kpi": 0.36260596366738473,
+            "final_absolute_error": 821.7542309819305,
+            "post_shock_wape": 0.38146072586293994,
+            "post_shock_mae": 676.1613816110859,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 3,
+            "actual_kpi": 2773.0,
+            "spend": 1199679.2361202796,
+            "wape_kpi": 0.2445488349667265,
+            "mape_kpi": 0.2518123300379926,
+            "final_deviation_kpi": 0.22360956517152134,
+            "final_absolute_error": 506.7542309819305,
+            "post_shock_wape": 0.2364212612296445,
+            "post_shock_mae": 419.07047252017674,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 4,
+            "actual_kpi": 3119.0,
+            "spend": 1198585.9652194919,
+            "wape_kpi": 0.3736515312923373,
+            "mape_kpi": 0.37576844713980284,
+            "final_deviation_kpi": 0.3762849743130094,
+            "final_absolute_error": 852.7542309819305,
+            "post_shock_wape": 0.3730368460659036,
+            "post_shock_mae": 661.2295634292676,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 5,
+            "actual_kpi": 1939.0,
+            "spend": 1176637.0937293984,
+            "wape_kpi": 0.1205342933421091,
+            "mape_kpi": 0.10822365814102312,
+            "final_deviation_kpi": 0.14439994703657416,
+            "final_absolute_error": 327.2457690180695,
+            "post_shock_wape": 0.12709842830704998,
+            "post_shock_mae": 225.28937596467173,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 6,
+            "actual_kpi": 2159.0,
+            "spend": 1199451.3513484236,
+            "wape_kpi": 0.03812437516154744,
+            "mape_kpi": 0.044934712906453206,
+            "final_deviation_kpi": 0.047323097293431454,
+            "final_absolute_error": 107.2457690180695,
+            "post_shock_wape": 0.035895291356843446,
+            "post_shock_mae": 63.626497176792945,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 7,
+            "actual_kpi": 2372.0,
+            "spend": 1171312.9723188262,
+            "wape_kpi": 0.051708456531652305,
+            "mape_kpi": 0.05912677072535963,
+            "final_deviation_kpi": 0.04666494359424761,
+            "final_absolute_error": 105.7542309819305,
+            "post_shock_wape": 0.049420532340994965,
+            "post_shock_mae": 87.6007755504798,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 8,
+            "actual_kpi": 2216.0,
+            "spend": 1118402.5504086926,
+            "wape_kpi": 0.03807592549295737,
+            "mape_kpi": 0.0449699175844532,
+            "final_deviation_kpi": 0.02217136804179903,
+            "final_absolute_error": 50.245769018069495,
+            "post_shock_wape": 0.03330102700534621,
+            "post_shock_mae": 59.028012328308094,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 9,
+            "actual_kpi": 1407.0,
+            "spend": 1161377.2689350147,
+            "wape_kpi": 0.37898770133174553,
+            "mape_kpi": 0.3846973934706923,
+            "final_deviation_kpi": 0.3791494200518101,
+            "final_absolute_error": 859.2457690180695,
+            "post_shock_wape": 0.3773786925964708,
+            "post_shock_mae": 668.9257396010354,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 10,
+            "actual_kpi": 2496.0,
+            "spend": 1193016.1943996064,
+            "wape_kpi": 0.09697239551835055,
+            "mape_kpi": 0.097437900309388,
+            "final_deviation_kpi": 0.10138098617674622,
+            "final_absolute_error": 229.7542309819305,
+            "post_shock_wape": 0.09601685374494665,
+            "post_shock_mae": 170.19547252017676,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 11,
+            "actual_kpi": 1940.0,
+            "spend": 1143708.7629556477,
+            "wape_kpi": 0.14552387130697012,
+            "mape_kpi": 0.14776326078110938,
+            "final_deviation_kpi": 0.14395868862865077,
+            "final_absolute_error": 326.2457690180695,
+            "post_shock_wape": 0.14253366011171603,
+            "post_shock_mae": 252.6492244495202,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 12,
+            "actual_kpi": 2705.0,
+            "spend": 1197164.386611006,
+            "wape_kpi": 0.20475582928700908,
+            "mape_kpi": 0.20764396803595392,
+            "final_deviation_kpi": 0.19360399343273177,
+            "final_absolute_error": 438.7542309819305,
+            "post_shock_wape": 0.2040613394218004,
+            "post_shock_mae": 361.7106240353283,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 13,
+            "actual_kpi": 2611.0,
+            "spend": 1192679.6861065796,
+            "wape_kpi": 0.1479139441854553,
+            "mape_kpi": 0.15037071004785338,
+            "final_deviation_kpi": 0.15212570308793444,
+            "final_absolute_error": 344.7542309819305,
+            "post_shock_wape": 0.14488903308493173,
+            "post_shock_mae": 256.82426039896467,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 14,
+            "actual_kpi": 3060.0,
+            "spend": 1150818.012887235,
+            "wape_kpi": 0.33852265966576395,
+            "mape_kpi": 0.3430330020327131,
+            "final_deviation_kpi": 0.3502507282455302,
+            "final_absolute_error": 793.7542309819305,
+            "post_shock_wape": 0.3317850511389656,
+            "post_shock_mae": 588.1083513080556,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 15,
+            "actual_kpi": 2077.0,
+            "spend": 1163430.208218199,
+            "wape_kpi": 0.06932955240442135,
+            "mape_kpi": 0.068505085920398,
+            "final_deviation_kpi": 0.08350628674314828,
+            "final_absolute_error": 189.2457690180695,
+            "post_shock_wape": 0.07187521630425617,
+            "post_shock_mae": 127.40301232830808,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 16,
+            "actual_kpi": 3510.0,
+            "spend": 1174052.2830250892,
+            "wape_kpi": 0.5972941619456056,
+            "mape_kpi": 0.618975974888511,
+            "final_deviation_kpi": 0.5488170118110494,
+            "final_absolute_error": 1243.7542309819305,
+            "post_shock_wape": 0.5808728940872534,
+            "post_shock_mae": 1029.631078580783,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 17,
+            "actual_kpi": 2140.0,
+            "spend": 1197692.587061255,
+            "wape_kpi": 0.07177601284698064,
+            "mape_kpi": 0.07009508313996785,
+            "final_deviation_kpi": 0.0557070070439756,
+            "final_absolute_error": 126.2457690180695,
+            "post_shock_wape": 0.07019556903878925,
+            "post_shock_mae": 124.42573960103536,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 18,
+            "actual_kpi": 2015.0,
+            "spend": 1168938.5370879828,
+            "wape_kpi": 0.09025844961511335,
+            "mape_kpi": 0.08960287152703102,
+            "final_deviation_kpi": 0.11086430803439759,
+            "final_absolute_error": 251.2457690180695,
+            "post_shock_wape": 0.09123603592910377,
+            "post_shock_mae": 161.7211941464899,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 19,
+            "actual_kpi": 2726.0,
+            "spend": 1145577.830055666,
+            "wape_kpi": 0.2409956087483948,
+            "mape_kpi": 0.25307797077954347,
+            "final_deviation_kpi": 0.20287041999912267,
+            "final_absolute_error": 459.7542309819305,
+            "post_shock_wape": 0.2305296740656594,
+            "post_shock_mae": 408.6272907019949,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 20,
+            "actual_kpi": 1238.0,
+            "spend": 1157216.1432508377,
+            "wape_kpi": 0.46558869386617,
+            "mape_kpi": 0.47298212974108417,
+            "final_deviation_kpi": 0.45372209099086064,
+            "final_absolute_error": 1028.2457690180695,
+            "post_shock_wape": 0.4599869932849624,
+            "post_shock_mae": 815.3537699040656,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 21,
+            "actual_kpi": 2103.0,
+            "spend": 1196870.7629286915,
+            "wape_kpi": 0.04451613965380423,
+            "mape_kpi": 0.0495563450739723,
+            "final_deviation_kpi": 0.07203356813714051,
+            "final_absolute_error": 163.2457690180695,
+            "post_shock_wape": 0.047428441855221215,
+            "post_shock_mae": 84.06967899497475,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 22,
+            "actual_kpi": 1922.0,
+            "spend": 1199041.390663765,
+            "wape_kpi": 0.1409539665295056,
+            "mape_kpi": 0.12429931052190982,
+            "final_deviation_kpi": 0.15190133997127153,
+            "final_absolute_error": 344.2457690180695,
+            "post_shock_wape": 0.1523486981400742,
+            "post_shock_mae": 270.04695172224746,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 23,
+            "actual_kpi": 2273.0,
+            "spend": 1196384.6556656258,
+            "wape_kpi": 0.06673034718924854,
+            "mape_kpi": 0.0848642918555528,
+            "final_deviation_kpi": 0.002980361209833394,
+            "final_absolute_error": 6.754230981930505,
+            "post_shock_wape": 0.049655597479927996,
+            "post_shock_mae": 88.01744221714647,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 24,
+            "actual_kpi": 3028.0,
+            "spend": 1194269.4744082855,
+            "wape_kpi": 0.34245042306888285,
+            "mape_kpi": 0.3314071045073883,
+            "final_deviation_kpi": 0.3361304591919822,
+            "final_absolute_error": 761.7542309819305,
+            "post_shock_wape": 0.3494683604541548,
+            "post_shock_mae": 619.4530482777525,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 25,
+            "actual_kpi": 1608.0,
+            "spend": 1196624.808319608,
+            "wape_kpi": 0.29113458503216116,
+            "mape_kpi": 0.28472396840461806,
+            "final_deviation_kpi": 0.2904564800592116,
+            "final_absolute_error": 658.2457690180695,
+            "post_shock_wape": 0.29212697757288686,
+            "post_shock_mae": 517.8121032373989,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 26,
+            "actual_kpi": 2557.0,
+            "spend": 1184151.2365205602,
+            "wape_kpi": 0.12350968012682828,
+            "mape_kpi": 0.12188542813306871,
+            "final_deviation_kpi": 0.12829774906007216,
+            "final_absolute_error": 290.7542309819305,
+            "post_shock_wape": 0.125004659287006,
+            "post_shock_mae": 221.57804827775252,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 27,
+            "actual_kpi": 2841.0,
+            "spend": 1199424.2880559664,
+            "wape_kpi": 0.26255724693893145,
+            "mape_kpi": 0.2660789177495927,
+            "final_deviation_kpi": 0.2536151369103109,
+            "final_absolute_error": 574.7542309819305,
+            "post_shock_wape": 0.25888494068840806,
+            "post_shock_mae": 458.8886543383586,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 28,
+            "actual_kpi": 4998.0,
+            "spend": 1198189.813995821,
+            "wape_kpi": 1.2581234955898712,
+            "mape_kpi": 1.2776321668715198,
+            "final_deviation_kpi": 1.2054095228010326,
+            "final_absolute_error": 2731.7542309819305,
+            "post_shock_wape": 1.2447823246664649,
+            "post_shock_mae": 2206.4492603989647,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 29,
+            "actual_kpi": 3200.0,
+            "spend": 1176100.8416123712,
+            "wape_kpi": 0.4126469831925262,
+            "mape_kpi": 0.4151905754772542,
+            "final_deviation_kpi": 0.41202690535480285,
+            "final_absolute_error": 933.7542309819305,
+            "post_shock_wape": 0.410486996609552,
+            "post_shock_mae": 727.6121391868435,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 30,
+            "actual_kpi": 2104.0,
+            "spend": 1186650.9068153724,
+            "wape_kpi": 0.046350782252517805,
+            "mape_kpi": 0.03604816056426537,
+            "final_deviation_kpi": 0.07159230972921712,
+            "final_absolute_error": 162.2457690180695,
+            "post_shock_wape": 0.05709816688860261,
+            "post_shock_mae": 101.20983051012627,
+            "constraint_violations": 0
+          }
+        ],
+        "adaptive_without_ml": [
+          {
+            "seed": 1,
+            "actual_kpi": 2190.0,
+            "spend": 1191669.9420857015,
+            "wape_kpi": 0.036225014664089436,
+            "mape_kpi": 0.03980183643603699,
+            "final_deviation_kpi": 0.033644086647806805,
+            "final_absolute_error": 76.2457690180695,
+            "post_shock_wape": 0.03799164500496437,
+            "post_shock_mae": 67.34240626770203,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 2,
+            "actual_kpi": 2540.0,
+            "spend": 810490.037789202,
+            "wape_kpi": 0.35287720022323554,
+            "mape_kpi": 0.3973076375643015,
+            "final_deviation_kpi": 0.12079635612537476,
+            "final_absolute_error": 273.7542309819305,
+            "post_shock_wape": 0.3141615765864139,
+            "post_shock_mae": 556.8697149444192,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 3,
+            "actual_kpi": 2534.0,
+            "spend": 999073.6841457102,
+            "wape_kpi": 0.23254986335251404,
+            "mape_kpi": 0.2591986371330254,
+            "final_deviation_kpi": 0.1181488056778345,
+            "final_absolute_error": 267.7542309819305,
+            "post_shock_wape": 0.20954263107055696,
+            "post_shock_mae": 371.42653312623736,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 4,
+            "actual_kpi": 2562.0,
+            "spend": 918608.8728392394,
+            "wape_kpi": 0.28244777090270623,
+            "mape_kpi": 0.3184927924732632,
+            "final_deviation_kpi": 0.13050404109968902,
+            "final_absolute_error": 295.7542309819305,
+            "post_shock_wape": 0.2578805714584215,
+            "post_shock_mae": 457.10835130805555,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 5,
+            "actual_kpi": 2264.0,
+            "spend": 1187556.5633414127,
+            "wape_kpi": 0.03965002038857128,
+            "mape_kpi": 0.06430891102061696,
+            "final_deviation_kpi": 0.0009909644614769888,
+            "final_absolute_error": 2.2457690180694954,
+            "post_shock_wape": 0.023986794165061817,
+            "post_shock_mae": 42.517991456075734,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 6,
+            "actual_kpi": 2162.0,
+            "spend": 1198479.4721955806,
+            "wape_kpi": 0.03465537681455414,
+            "mape_kpi": 0.038403383883132844,
+            "final_deviation_kpi": 0.04599932206966133,
+            "final_absolute_error": 104.2457690180695,
+            "post_shock_wape": 0.035164452470342576,
+            "post_shock_mae": 62.3310426313384,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 7,
+            "actual_kpi": 2573.0,
+            "spend": 904412.9487823381,
+            "wape_kpi": 0.28129188848661096,
+            "mape_kpi": 0.3078798135808385,
+            "final_deviation_kpi": 0.13535788358684617,
+            "final_absolute_error": 306.7542309819305,
+            "post_shock_wape": 0.26616982303952347,
+            "post_shock_mae": 471.80153312623736,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 8,
+            "actual_kpi": 2515.0,
+            "spend": 1087601.9189076677,
+            "wape_kpi": 0.0853862784252893,
+            "mape_kpi": 0.09024513807545356,
+            "final_deviation_kpi": 0.10976489592729036,
+            "final_absolute_error": 248.7542309819305,
+            "post_shock_wape": 0.07936996799687127,
+            "post_shock_mae": 140.687896762601,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 9,
+            "actual_kpi": 1498.0,
+            "spend": 1195600.9275911255,
+            "wape_kpi": 0.3375532249187923,
+            "mape_kpi": 0.33998365579008705,
+            "final_deviation_kpi": 0.33899490493078294,
+            "final_absolute_error": 768.2457690180695,
+            "post_shock_wape": 0.33873184680007246,
+            "post_shock_mae": 600.4219517222474,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 10,
+            "actual_kpi": 2445.0,
+            "spend": 1148309.3981016534,
+            "wape_kpi": 0.09389346872735273,
+            "mape_kpi": 0.11561401293098662,
+            "final_deviation_kpi": 0.07887680737265405,
+            "final_absolute_error": 178.7542309819305,
+            "post_shock_wape": 0.07758133598517176,
+            "post_shock_mae": 137.51744221714645,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 11,
+            "actual_kpi": 2176.0,
+            "spend": 1193139.4148245864,
+            "wape_kpi": 0.03048960916233285,
+            "mape_kpi": 0.02655928359055262,
+            "final_deviation_kpi": 0.03982170435873407,
+            "final_absolute_error": 90.2457690180695,
+            "post_shock_wape": 0.03482681345260241,
+            "post_shock_mae": 61.732557782853554,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 12,
+            "actual_kpi": 2534.0,
+            "spend": 1069984.326399375,
+            "wape_kpi": 0.18403470239856284,
+            "mape_kpi": 0.20966885518424255,
+            "final_deviation_kpi": 0.1181488056778345,
+            "final_absolute_error": 267.7542309819305,
+            "post_shock_wape": 0.16627568681622035,
+            "post_shock_mae": 294.73335130805555,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 13,
+            "actual_kpi": 2532.0,
+            "spend": 988880.050602531,
+            "wape_kpi": 0.2308263074674228,
+            "mape_kpi": 0.24352159641691662,
+            "final_deviation_kpi": 0.11726628886198776,
+            "final_absolute_error": 265.7542309819305,
+            "post_shock_wape": 0.21831483466437587,
+            "post_shock_mae": 386.9757755504798,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 14,
+            "actual_kpi": 2605.0,
+            "spend": 870253.1471877107,
+            "wape_kpi": 0.3311203730100177,
+            "mape_kpi": 0.3691383306011683,
+            "final_deviation_kpi": 0.14947815264039419,
+            "final_absolute_error": 338.7542309819305,
+            "post_shock_wape": 0.2988930273348095,
+            "post_shock_mae": 529.8053210050252,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 15,
+            "actual_kpi": 2333.0,
+            "spend": 1196696.5374384725,
+            "wape_kpi": 0.0503947184949239,
+            "mape_kpi": 0.0675584378199436,
+            "final_deviation_kpi": 0.02945586568523595,
+            "final_absolute_error": 66.7542309819305,
+            "post_shock_wape": 0.03616285850517217,
+            "post_shock_mae": 64.10077555047978,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 16,
+            "actual_kpi": 2565.0,
+            "spend": 752698.214283689,
+            "wape_kpi": 0.4206602318224652,
+            "mape_kpi": 0.5002792440235307,
+            "final_deviation_kpi": 0.13182781632345916,
+            "final_absolute_error": 298.7542309819305,
+            "post_shock_wape": 0.35663571023580365,
+            "post_shock_mae": 632.157593732298,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 17,
+            "actual_kpi": 2098.0,
+            "spend": 1199726.4354479313,
+            "wape_kpi": 0.09833406255007951,
+            "mape_kpi": 0.08767006506739575,
+            "final_deviation_kpi": 0.07423986017675739,
+            "final_absolute_error": 168.2457690180695,
+            "post_shock_wape": 0.10345087533038733,
+            "post_shock_mae": 183.37270929800505,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 18,
+            "actual_kpi": 2106.0,
+            "spend": 1199988.7973836907,
+            "wape_kpi": 0.049390251588796834,
+            "mape_kpi": 0.04184006391305365,
+            "final_deviation_kpi": 0.07070979291337037,
+            "final_absolute_error": 160.2457690180695,
+            "post_shock_wape": 0.0576708710452758,
+            "post_shock_mae": 102.22498202527778,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 19,
+            "actual_kpi": 2499.0,
+            "spend": 998258.5586187764,
+            "wape_kpi": 0.2435005528425852,
+            "mape_kpi": 0.28274555648077787,
+            "final_deviation_kpi": 0.10270476140051635,
+            "final_absolute_error": 232.7542309819305,
+            "post_shock_wape": 0.21188259768084483,
+            "post_shock_mae": 375.57426039896467,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 20,
+            "actual_kpi": 1231.0,
+            "spend": 1197696.5776941266,
+            "wape_kpi": 0.46894255354555464,
+            "mape_kpi": 0.47613441816199226,
+            "final_deviation_kpi": 0.4568108998463243,
+            "final_absolute_error": 1035.2457690180695,
+            "post_shock_wape": 0.46493190902578996,
+            "post_shock_mae": 824.1189214192171,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 21,
+            "actual_kpi": 2239.0,
+            "spend": 1199652.3827022589,
+            "wape_kpi": 0.039283867222922216,
+            "mape_kpi": 0.07765531732123493,
+            "final_deviation_kpi": 0.012022424659561387,
+            "final_absolute_error": 27.245769018069495,
+            "post_shock_wape": 0.014930822983968691,
+            "post_shock_mae": 26.46575443538117,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 22,
+            "actual_kpi": 2137.0,
+            "spend": 1199017.7058243873,
+            "wape_kpi": 0.052267594013635565,
+            "mape_kpi": 0.050460715354093445,
+            "final_deviation_kpi": 0.057030782267745724,
+            "final_absolute_error": 129.2457690180695,
+            "post_shock_wape": 0.059365477001402094,
+            "post_shock_mae": 105.22876990406566,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 23,
+            "actual_kpi": 2300.0,
+            "spend": 1197777.5741142586,
+            "wape_kpi": 0.0826223209702418,
+            "mape_kpi": 0.11401476484998833,
+            "final_deviation_kpi": 0.014894338223764543,
+            "final_absolute_error": 33.754230981930505,
+            "post_shock_wape": 0.052752046446418524,
+            "post_shock_mae": 93.50607858078283,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 24,
+            "actual_kpi": 2530.0,
+            "spend": 863382.470543067,
+            "wape_kpi": 0.2987423941893622,
+            "mape_kpi": 0.3145056870836698,
+            "final_deviation_kpi": 0.116383772046141,
+            "final_absolute_error": 263.7542309819305,
+            "post_shock_wape": 0.2856203948083273,
+            "post_shock_mae": 506.27880585351005,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 25,
+            "actual_kpi": 1694.0,
+            "spend": 1199599.8166936669,
+            "wape_kpi": 0.26023277149535773,
+            "mape_kpi": 0.2533377602644756,
+            "final_deviation_kpi": 0.25250825697780127,
+            "final_absolute_error": 572.2457690180695,
+            "post_shock_wape": 0.2611966792009172,
+            "post_shock_mae": 462.9863456616414,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 26,
+            "actual_kpi": 2512.0,
+            "spend": 1062151.9008136655,
+            "wape_kpi": 0.1576879844363184,
+            "mape_kpi": 0.15698060040204403,
+            "final_deviation_kpi": 0.10844112070352023,
+            "final_absolute_error": 245.7542309819305,
+            "post_shock_wape": 0.15758468754312374,
+            "post_shock_mae": 279.32804827775254,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 27,
+            "actual_kpi": 2548.0,
+            "spend": 898489.0426223562,
+            "wape_kpi": 0.3019128448449602,
+            "mape_kpi": 0.3328963424752907,
+            "final_deviation_kpi": 0.12432642338876176,
+            "final_absolute_error": 281.7542309819305,
+            "post_shock_wape": 0.2740124508566527,
+            "post_shock_mae": 485.70304827775254,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 28,
+            "actual_kpi": 2637.0,
+            "spend": 435168.01546373894,
+            "wape_kpi": 0.6950191375124102,
+            "mape_kpi": 0.92238776945578,
+            "final_deviation_kpi": 0.16359842169394223,
+            "final_absolute_error": 370.7542309819305,
+            "post_shock_wape": 0.4871096840784853,
+            "post_shock_mae": 863.4303210050252,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 29,
+            "actual_kpi": 2575.0,
+            "spend": 605127.6496824757,
+            "wape_kpi": 0.5154140028410902,
+            "mape_kpi": 0.6265940948478622,
+            "final_deviation_kpi": 0.13624040040269292,
+            "final_absolute_error": 308.7542309819305,
+            "post_shock_wape": 0.41592982305375586,
+            "post_shock_mae": 737.2598664595707,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 30,
+            "actual_kpi": 2048.0,
+            "spend": 1194889.2500095328,
+            "wape_kpi": 0.07692894507518366,
+            "mape_kpi": 0.06195778479558499,
+            "final_deviation_kpi": 0.09630278057292618,
+            "final_absolute_error": 218.2457690180695,
+            "post_shock_wape": 0.09217629648483588,
+            "post_shock_mae": 163.38786081315658,
+            "constraint_violations": 0
+          }
+        ],
+        "adaptive_ml": [
+          {
+            "seed": 1,
+            "actual_kpi": 2198.0,
+            "spend": 1189898.53061652,
+            "wape_kpi": 0.033838134374030014,
+            "mape_kpi": 0.03486325924626548,
+            "final_deviation_kpi": 0.030114019384419797,
+            "final_absolute_error": 68.2457690180695,
+            "post_shock_wape": 0.037429625627333575,
+            "post_shock_mae": 66.34619414648992,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 2,
+            "actual_kpi": 2532.0,
+            "spend": 829676.6646090634,
+            "wape_kpi": 0.3245848374341029,
+            "mape_kpi": 0.35556223370640005,
+            "final_deviation_kpi": 0.11726628886198776,
+            "final_absolute_error": 265.7542309819305,
+            "post_shock_wape": 0.2974505821640841,
+            "post_shock_mae": 527.248502823207,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 3,
+            "actual_kpi": 2531.0,
+            "spend": 1038128.716909923,
+            "wape_kpi": 0.21726455943501194,
+            "mape_kpi": 0.2516969963679566,
+            "final_deviation_kpi": 0.11682503045406438,
+            "final_absolute_error": 264.7542309819305,
+            "post_shock_wape": 0.18803630781399333,
+            "post_shock_mae": 333.30532100502523,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 4,
+            "actual_kpi": 2548.0,
+            "spend": 936284.197661323,
+            "wape_kpi": 0.26136298570922223,
+            "mape_kpi": 0.2891021905027327,
+            "final_deviation_kpi": 0.12432642338876176,
+            "final_absolute_error": 281.7542309819305,
+            "post_shock_wape": 0.2432531089493617,
+            "post_shock_mae": 431.18032100502523,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 5,
+            "actual_kpi": 2180.0,
+            "spend": 1194138.002274938,
+            "wape_kpi": 0.020246546693638297,
+            "mape_kpi": 0.025895474666759094,
+            "final_deviation_kpi": 0.03805667072704056,
+            "final_absolute_error": 86.2457690180695,
+            "post_shock_wape": 0.019240080111999465,
+            "post_shock_mae": 34.10416399069049,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 6,
+            "actual_kpi": 2157.0,
+            "spend": 1199639.250860025,
+            "wape_kpi": 0.04976275698991242,
+            "mape_kpi": 0.06109035962284036,
+            "final_deviation_kpi": 0.048205614109278205,
+            "final_absolute_error": 109.2457690180695,
+            "post_shock_wape": 0.04437259504909184,
+            "post_shock_mae": 78.6530123283081,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 7,
+            "actual_kpi": 2561.0,
+            "spend": 919707.0392808534,
+            "wape_kpi": 0.26782821592900474,
+            "mape_kpi": 0.28993747603060044,
+            "final_deviation_kpi": 0.13006278269176566,
+            "final_absolute_error": 294.7542309819305,
+            "post_shock_wape": 0.2566496849127358,
+            "post_shock_mae": 454.92653312623736,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 8,
+            "actual_kpi": 2501.0,
+            "spend": 1095726.4739396144,
+            "wape_kpi": 0.07177575068995902,
+            "mape_kpi": 0.0805282996882641,
+            "final_deviation_kpi": 0.1035872782163631,
+            "final_absolute_error": 234.7542309819305,
+            "post_shock_wape": 0.06227218457320617,
+            "post_shock_mae": 110.38107858078283,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 9,
+            "actual_kpi": 1497.0,
+            "spend": 1197063.4864459592,
+            "wape_kpi": 0.3426644041713156,
+            "mape_kpi": 0.3463553294809293,
+            "final_deviation_kpi": 0.3394361633387063,
+            "final_absolute_error": 769.2457690180695,
+            "post_shock_wape": 0.34196078702668886,
+            "post_shock_mae": 606.1454365707323,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 10,
+            "actual_kpi": 2411.0,
+            "spend": 1180844.2482200465,
+            "wape_kpi": 0.05714571377432574,
+            "mape_kpi": 0.06465199988955042,
+            "final_deviation_kpi": 0.06387402150325927,
+            "final_absolute_error": 144.7542309819305,
+            "post_shock_wape": 0.05303839852475512,
+            "post_shock_mae": 94.01365433835858,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 11,
+            "actual_kpi": 2082.0,
+            "spend": 1191649.3848649582,
+            "wape_kpi": 0.08719053090988803,
+            "mape_kpi": 0.08656684745436391,
+            "final_deviation_kpi": 0.0812999947035314,
+            "final_absolute_error": 184.2457690180695,
+            "post_shock_wape": 0.08550044653913788,
+            "post_shock_mae": 151.55452747982324,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 12,
+            "actual_kpi": 2514.0,
+            "spend": 1087724.8348248685,
+            "wape_kpi": 0.1480760708738386,
+            "mape_kpi": 0.15582217051214184,
+            "final_deviation_kpi": 0.10932363751936698,
+            "final_absolute_error": 247.7542309819305,
+            "post_shock_wape": 0.14408553770094246,
+            "post_shock_mae": 255.40001797472223,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 13,
+            "actual_kpi": 2532.0,
+            "spend": 989044.909669006,
+            "wape_kpi": 0.22643702802124835,
+            "mape_kpi": 0.23616097013517892,
+            "final_deviation_kpi": 0.11726628886198776,
+            "final_absolute_error": 265.7542309819305,
+            "post_shock_wape": 0.21653902438752726,
+            "post_shock_mae": 383.82804827775254,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 14,
+            "actual_kpi": 2581.0,
+            "spend": 874727.4035031234,
+            "wape_kpi": 0.30321709653076573,
+            "mape_kpi": 0.33206990885093135,
+            "final_deviation_kpi": 0.13888795085023317,
+            "final_absolute_error": 314.7542309819305,
+            "post_shock_wape": 0.27853852325901773,
+            "post_shock_mae": 493.7257755504798,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 15,
+            "actual_kpi": 2249.0,
+            "spend": 1199998.2532012328,
+            "wape_kpi": 0.014145386221051147,
+            "mape_kpi": 0.017785630930411446,
+            "final_deviation_kpi": 0.007609840580327627,
+            "final_absolute_error": 17.245769018069495,
+            "post_shock_wape": 0.009314372973441514,
+            "post_shock_mae": 16.51026926642527,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 16,
+            "actual_kpi": 2555.0,
+            "spend": 753570.3956126075,
+            "wape_kpi": 0.40994267255938865,
+            "mape_kpi": 0.48500271923331273,
+            "final_deviation_kpi": 0.1274152322442254,
+            "final_absolute_error": 288.7542309819305,
+            "post_shock_wape": 0.35028254061718644,
+            "post_shock_mae": 620.8962300959344,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 17,
+            "actual_kpi": 2071.0,
+            "spend": 1199999.6453137242,
+            "wape_kpi": 0.10727504134310517,
+            "mape_kpi": 0.10238500427527199,
+            "final_deviation_kpi": 0.08615383719068853,
+            "final_absolute_error": 195.2457690180695,
+            "post_shock_wape": 0.10780812822388228,
+            "post_shock_mae": 191.0961941464899,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 18,
+            "actual_kpi": 2069.0,
+            "spend": 1199988.7514121467,
+            "wape_kpi": 0.06591000714886201,
+            "mape_kpi": 0.06540217792695871,
+            "final_deviation_kpi": 0.08703635400653528,
+            "final_absolute_error": 197.2457690180695,
+            "post_shock_wape": 0.06693243751923712,
+            "post_shock_mae": 118.64164869194445,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 19,
+            "actual_kpi": 2473.0,
+            "spend": 1036928.8170301344,
+            "wape_kpi": 0.20902943514076078,
+            "mape_kpi": 0.2451576150074738,
+            "final_deviation_kpi": 0.09123204279450857,
+            "final_absolute_error": 206.7542309819305,
+            "post_shock_wape": 0.1807663841535373,
+            "post_shock_mae": 320.4189573686616,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 20,
+            "actual_kpi": 1221.0,
+            "spend": 1193554.4672942467,
+            "wape_kpi": 0.4733945369838173,
+            "mape_kpi": 0.47972998012341356,
+            "final_deviation_kpi": 0.46122348392555806,
+            "final_absolute_error": 1045.2457690180695,
+            "post_shock_wape": 0.47047303543718394,
+            "post_shock_mae": 833.9408911161868,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 21,
+            "actual_kpi": 2141.0,
+            "spend": 1197419.5835111486,
+            "wape_kpi": 0.03633337075967112,
+            "mape_kpi": 0.048912163962517435,
+            "final_deviation_kpi": 0.05526574863605222,
+            "final_absolute_error": 125.2457690180695,
+            "post_shock_wape": 0.033303163961154694,
+            "post_shock_mae": 59.031800207095976,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 22,
+            "actual_kpi": 2084.0,
+            "spend": 1199999.4219863226,
+            "wape_kpi": 0.07455648299636174,
+            "mape_kpi": 0.06457304453355556,
+            "final_deviation_kpi": 0.08041747788768465,
+            "final_absolute_error": 182.2457690180695,
+            "post_shock_wape": 0.08350025590239867,
+            "post_shock_mae": 148.0090729343687,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 23,
+            "actual_kpi": 2325.0,
+            "spend": 1195042.0894847778,
+            "wape_kpi": 0.08999457694847139,
+            "mape_kpi": 0.11842944478872773,
+            "final_deviation_kpi": 0.02592579842184894,
+            "final_absolute_error": 58.754230981930505,
+            "post_shock_wape": 0.06376164277171818,
+            "post_shock_mae": 113.02123009593433,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 24,
+            "actual_kpi": 2537.0,
+            "spend": 879437.6237060054,
+            "wape_kpi": 0.2854830423594126,
+            "mape_kpi": 0.29363132898414224,
+            "final_deviation_kpi": 0.11947258090160463,
+            "final_absolute_error": 270.7542309819305,
+            "post_shock_wape": 0.27778845177024053,
+            "post_shock_mae": 492.39623009593436,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 25,
+            "actual_kpi": 1658.0,
+            "spend": 1199408.965970466,
+            "wape_kpi": 0.2777480866186635,
+            "mape_kpi": 0.2734194001782037,
+            "final_deviation_kpi": 0.2683935596630428,
+            "final_absolute_error": 608.2457690180695,
+            "post_shock_wape": 0.2790017949971899,
+            "post_shock_mae": 494.54695172224746,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 26,
+            "actual_kpi": 2509.0,
+            "spend": 1084529.5952399545,
+            "wape_kpi": 0.14340470518443826,
+            "mape_kpi": 0.13823757962014876,
+            "final_deviation_kpi": 0.1071173454797501,
+            "final_absolute_error": 242.7542309819305,
+            "post_shock_wape": 0.1476008300058955,
+            "post_shock_mae": 261.6310785807828,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 27,
+            "actual_kpi": 2526.0,
+            "spend": 953114.1972994299,
+            "wape_kpi": 0.249546972477963,
+            "mape_kpi": 0.2657886732101416,
+            "final_deviation_kpi": 0.11461873841444749,
+            "final_absolute_error": 259.7542309819305,
+            "post_shock_wape": 0.23358765782759727,
+            "post_shock_mae": 414.0477452474495,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 28,
+            "actual_kpi": 2641.0,
+            "spend": 463543.08853538305,
+            "wape_kpi": 0.6611686285527921,
+            "mape_kpi": 0.8524840088537753,
+            "final_deviation_kpi": 0.16536345532563573,
+            "final_absolute_error": 374.7542309819305,
+            "post_shock_wape": 0.48710541016686837,
+            "post_shock_mae": 863.4227452474495,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 29,
+            "actual_kpi": 2558.0,
+            "spend": 769535.1102371211,
+            "wape_kpi": 0.3987797541730189,
+            "mape_kpi": 0.47069626990280633,
+            "final_deviation_kpi": 0.12873900746799552,
+            "final_absolute_error": 291.7542309819305,
+            "post_shock_wape": 0.33767877525875917,
+            "post_shock_mae": 598.5553210050253,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 30,
+            "actual_kpi": 1996.0,
+            "spend": 1195776.3786377036,
+            "wape_kpi": 0.10385138183949996,
+            "mape_kpi": 0.08512592722844729,
+            "final_deviation_kpi": 0.11924821778494173,
+            "final_absolute_error": 270.2457690180695,
+            "post_shock_wape": 0.11988620245342298,
+            "post_shock_mae": 212.5052850555808,
+            "constraint_violations": 0
+          }
+        ]
+      }
+    },
+    "fraud_surge": {
+      "metrics": {
+        "static": {
+          "actual_kpi": {
+            "mean": 2472.1,
+            "std": 722.1429484049779
+          },
+          "spend": {
+            "mean": 1178880.7783806997,
+            "std": 22869.569067371765
+          },
+          "wape_kpi": {
+            "mean": 0.23821845753844306,
+            "std": 0.2434334410120666
+          },
+          "mape_kpi": {
+            "mean": 0.24090302195191066,
+            "std": 0.24795190626253963
+          },
+          "final_deviation_kpi": {
+            "mean": 0.232704975725191,
+            "std": 0.23249831743213056
+          },
+          "final_absolute_error": {
+            "mean": 527.3666666666667,
+            "std": 526.898328184386
+          },
+          "post_shock_wape": {
+            "mean": 0.23613507029436123,
+            "std": 0.23983384018905382
+          },
+          "post_shock_mae": {
+            "mean": 418.5631823980601,
+            "std": 425.1194677314956
+          },
+          "constraint_violations": 0
+        },
+        "adaptive_without_ml": {
+          "actual_kpi": {
+            "mean": 2303.766666666667,
+            "std": 342.7064374925726
+          },
+          "spend": {
+            "mean": 1040592.5156022791,
+            "std": 200901.56980056656
+          },
+          "wape_kpi": {
+            "mean": 0.21197178835915217,
+            "std": 0.16843123543517505
+          },
+          "mape_kpi": {
+            "mean": 0.2394134288397535,
+            "std": 0.20478867854807678
+          },
+          "final_deviation_kpi": {
+            "mean": 0.11736775559208938,
+            "std": 0.09434772392431769
+          },
+          "final_absolute_error": {
+            "mean": 265.9841795297195,
+            "std": 213.8151301599699
+          },
+          "post_shock_wape": {
+            "mean": 0.18944723674495856,
+            "std": 0.1402469248510328
+          },
+          "post_shock_mae": {
+            "mean": 335.8062748139876,
+            "std": 248.59585284817246
+          },
+          "constraint_violations": 0
+        },
+        "adaptive_ml": {
+          "actual_kpi": {
+            "mean": 2275.6,
+            "std": 348.3868836360737
+          },
+          "spend": {
+            "mean": 1055795.2181126305,
+            "std": 183541.63374233365
+          },
+          "wape_kpi": {
+            "mean": 0.20082829492097515,
+            "std": 0.1548529987376262
+          },
+          "mape_kpi": {
+            "mean": 0.22081329875844558,
+            "std": 0.18470469050746305
+          },
+          "final_deviation_kpi": {
+            "mean": 0.12127276803845456,
+            "std": 0.09184712841407826
+          },
+          "final_absolute_error": {
+            "mean": 274.83389746425746,
+            "std": 208.14816616486416
+          },
+          "post_shock_wape": {
+            "mean": 0.18447635122519437,
+            "std": 0.13218509536400072
+          },
+          "post_shock_mae": {
+            "mean": 326.99509035123407,
+            "std": 234.3057899539305
+          },
+          "constraint_violations": 0
+        }
+      },
+      "paired_wape_delta": {
+        "mean": -0.011143493438177058,
+        "std": 0.030704016202972195
+      },
+      "runs": {
+        "static": [
+          {
+            "seed": 1,
+            "actual_kpi": 2140.0,
+            "spend": 1133169.1358582089,
+            "wape_kpi": 0.05819338509093517,
+            "mape_kpi": 0.054571228800017635,
+            "final_deviation_kpi": 0.0557070070439756,
+            "final_absolute_error": 126.2457690180695,
+            "post_shock_wape": 0.06331243437966849,
+            "post_shock_mae": 112.22498202527778,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 2,
+            "actual_kpi": 3087.0,
+            "spend": 1195804.9668374823,
+            "wape_kpi": 0.38766183788550096,
+            "mape_kpi": 0.3938468067021701,
+            "final_deviation_kpi": 0.3621647052594614,
+            "final_absolute_error": 820.7542309819305,
+            "post_shock_wape": 0.3806914217718864,
+            "post_shock_mae": 674.7977452474496,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 3,
+            "actual_kpi": 2767.0,
+            "spend": 1199679.2361202796,
+            "wape_kpi": 0.24174162547477757,
+            "mape_kpi": 0.24977154902171386,
+            "final_deviation_kpi": 0.22096201472398108,
+            "final_absolute_error": 500.7542309819305,
+            "post_shock_wape": 0.2326901363880348,
+            "post_shock_mae": 412.4568361565404,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 4,
+            "actual_kpi": 3116.0,
+            "spend": 1198585.9652194919,
+            "wape_kpi": 0.37208875487413895,
+            "mape_kpi": 0.37461831926104316,
+            "final_deviation_kpi": 0.37496119908923925,
+            "final_absolute_error": 849.7542309819305,
+            "post_shock_wape": 0.37095972502005903,
+            "post_shock_mae": 657.5477452474495,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 5,
+            "actual_kpi": 1938.0,
+            "spend": 1176637.0937293984,
+            "wape_kpi": 0.12088961596394227,
+            "mape_kpi": 0.10847621022956584,
+            "final_deviation_kpi": 0.14484120544449752,
+            "final_absolute_error": 328.2457690180695,
+            "post_shock_wape": 0.12757069554072453,
+            "post_shock_mae": 226.12649717679292,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 6,
+            "actual_kpi": 2151.0,
+            "spend": 1199451.3513484236,
+            "wape_kpi": 0.041348003472748834,
+            "mape_kpi": 0.04727328085171277,
+            "final_deviation_kpi": 0.050853164556818466,
+            "final_absolute_error": 115.2457690180695,
+            "post_shock_wape": 0.04017988775285001,
+            "post_shock_mae": 71.22119414648992,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 7,
+            "actual_kpi": 2360.0,
+            "spend": 1171312.9723188262,
+            "wape_kpi": 0.04754748392846567,
+            "mape_kpi": 0.0561635367623013,
+            "final_deviation_kpi": 0.041369842699167096,
+            "final_absolute_error": 93.7542309819305,
+            "post_shock_wape": 0.04389009070864335,
+            "post_shock_mae": 77.79774524744948,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 8,
+            "actual_kpi": 2203.0,
+            "spend": 1118402.5504086926,
+            "wape_kpi": 0.042843036686330015,
+            "mape_kpi": 0.048439815125016134,
+            "final_deviation_kpi": 0.02790772734480292,
+            "final_absolute_error": 63.245769018069495,
+            "post_shock_wape": 0.039637100977495565,
+            "post_shock_mae": 70.2590729343687,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 9,
+            "actual_kpi": 1405.0,
+            "spend": 1161377.2689350147,
+            "wape_kpi": 0.3798446558902843,
+            "mape_kpi": 0.38532469357653304,
+            "final_deviation_kpi": 0.38003193686765685,
+            "final_absolute_error": 861.2457690180695,
+            "post_shock_wape": 0.3785176900423917,
+            "post_shock_mae": 670.9446789949748,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 10,
+            "actual_kpi": 2490.0,
+            "spend": 1193016.1943996064,
+            "wape_kpi": 0.09440474743207193,
+            "mape_kpi": 0.09557142138930111,
+            "final_deviation_kpi": 0.09873343572920597,
+            "final_absolute_error": 223.7542309819305,
+            "post_shock_wape": 0.09260413531880077,
+            "post_shock_mae": 164.14623009593433,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 11,
+            "actual_kpi": 1936.0,
+            "spend": 1143708.7629556477,
+            "wape_kpi": 0.14669113023661212,
+            "mape_kpi": 0.14857419567380853,
+            "final_deviation_kpi": 0.14572372226034427,
+            "final_absolute_error": 330.2457690180695,
+            "post_shock_wape": 0.144085090028674,
+            "post_shock_mae": 255.3992244495202,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 12,
+            "actual_kpi": 2702.0,
+            "spend": 1197164.386611006,
+            "wape_kpi": 0.20384581750439562,
+            "mape_kpi": 0.20701308857558404,
+            "final_deviation_kpi": 0.19228021820896166,
+            "final_absolute_error": 435.7542309819305,
+            "post_shock_wape": 0.20285182243419955,
+            "post_shock_mae": 359.56668464138886,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 13,
+            "actual_kpi": 2609.0,
+            "spend": 1192679.6861065796,
+            "wape_kpi": 0.14720812232579578,
+            "mape_kpi": 0.1498645192006355,
+            "final_deviation_kpi": 0.1512431862720877,
+            "final_absolute_error": 342.7542309819305,
+            "post_shock_wape": 0.1439509094850081,
+            "post_shock_mae": 255.16138161108586,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 14,
+            "actual_kpi": 3057.0,
+            "spend": 1150818.012887235,
+            "wape_kpi": 0.33729752012804054,
+            "mape_kpi": 0.3421470305025562,
+            "final_deviation_kpi": 0.3489269530217601,
+            "final_absolute_error": 790.7542309819305,
+            "post_shock_wape": 0.3301566908129023,
+            "post_shock_mae": 585.221987671692,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 15,
+            "actual_kpi": 2069.0,
+            "spend": 1163430.208218199,
+            "wape_kpi": 0.07324131683392408,
+            "mape_kpi": 0.07137441747156807,
+            "final_deviation_kpi": 0.08703635400653528,
+            "final_absolute_error": 197.2457690180695,
+            "post_shock_wape": 0.07707442978629306,
+            "post_shock_mae": 136.61892141921717,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 16,
+            "actual_kpi": 3504.0,
+            "spend": 1174052.2830250892,
+            "wape_kpi": 0.5946429085365427,
+            "mape_kpi": 0.6170116537460074,
+            "final_deviation_kpi": 0.5461694613635091,
+            "final_absolute_error": 1237.7542309819305,
+            "post_shock_wape": 0.5773490539590665,
+            "post_shock_mae": 1023.3848664595707,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 17,
+            "actual_kpi": 2121.0,
+            "spend": 1197692.587061255,
+            "wape_kpi": 0.0790480681345437,
+            "mape_kpi": 0.07535460377437232,
+            "final_deviation_kpi": 0.06409091679451974,
+            "final_absolute_error": 145.2457690180695,
+            "post_shock_wape": 0.07986102016055369,
+            "post_shock_mae": 141.5583153586111,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 18,
+            "actual_kpi": 1999.0,
+            "spend": 1168938.5370879828,
+            "wape_kpi": 0.09632787449031799,
+            "mape_kpi": 0.09396431216724274,
+            "final_deviation_kpi": 0.1179244425611716,
+            "final_absolute_error": 267.2457690180695,
+            "post_shock_wape": 0.09930304410612362,
+            "post_shock_mae": 176.02043657073233,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 19,
+            "actual_kpi": 2710.0,
+            "spend": 1145577.830055666,
+            "wape_kpi": 0.23465446657414127,
+            "mape_kpi": 0.24849483855917606,
+            "final_deviation_kpi": 0.19581028547234866,
+            "final_absolute_error": 443.7542309819305,
+            "post_shock_wape": 0.22210152035700612,
+            "post_shock_mae": 393.687896762601,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 20,
+            "actual_kpi": 1235.0,
+            "spend": 1157216.1432508377,
+            "wape_kpi": 0.46685724385995453,
+            "mape_kpi": 0.47391743879004095,
+            "final_deviation_kpi": 0.4550458662146308,
+            "final_absolute_error": 1031.2457690180695,
+            "post_shock_wape": 0.46167305141785475,
+            "post_shock_mae": 818.342406267702,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 21,
+            "actual_kpi": 2102.0,
+            "spend": 1196870.7629286915,
+            "wape_kpi": 0.045252509612173426,
+            "mape_kpi": 0.05009506044095386,
+            "final_deviation_kpi": 0.07247482654506389,
+            "final_absolute_error": 164.2457690180695,
+            "post_shock_wape": 0.048407167615506,
+            "post_shock_mae": 85.80452747982324,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 22,
+            "actual_kpi": 1907.0,
+            "spend": 1199041.390663765,
+            "wape_kpi": 0.147028214788717,
+            "mape_kpi": 0.12871686328279833,
+            "final_deviation_kpi": 0.15852021609012218,
+            "final_absolute_error": 359.2457690180695,
+            "post_shock_wape": 0.16042211718451949,
+            "post_shock_mae": 284.3575577828535,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 23,
+            "actual_kpi": 2260.0,
+            "spend": 1196384.6556656258,
+            "wape_kpi": 0.0607609192674452,
+            "mape_kpi": 0.08045526875416756,
+            "final_deviation_kpi": 0.002755998093170492,
+            "final_absolute_error": 6.245769018069495,
+            "post_shock_wape": 0.04172149748734928,
+            "post_shock_mae": 73.95378730041436,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 24,
+            "actual_kpi": 3014.0,
+            "spend": 1194269.4744082855,
+            "wape_kpi": 0.33757398183802306,
+            "mape_kpi": 0.32789009981648076,
+            "final_deviation_kpi": 0.3299528414810549,
+            "final_absolute_error": 747.7542309819305,
+            "post_shock_wape": 0.34298697348702867,
+            "post_shock_mae": 607.9644119141161,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 25,
+            "actual_kpi": 1607.0,
+            "spend": 1196624.808319608,
+            "wape_kpi": 0.2923034517564721,
+            "mape_kpi": 0.2856006016358981,
+            "final_deviation_kpi": 0.29089773846713496,
+            "final_absolute_error": 659.2457690180695,
+            "post_shock_wape": 0.29368054444565334,
+            "post_shock_mae": 520.5658911161868,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 26,
+            "actual_kpi": 2554.0,
+            "spend": 1184151.2365205602,
+            "wape_kpi": 0.12207874287148202,
+            "mape_kpi": 0.12086680034671474,
+            "final_deviation_kpi": 0.12697397383630202,
+            "final_absolute_error": 287.7542309819305,
+            "post_shock_wape": 0.12310276861745696,
+            "post_shock_mae": 218.2068361565404,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 27,
+            "actual_kpi": 2840.0,
+            "spend": 1199424.2880559664,
+            "wape_kpi": 0.26222443344246327,
+            "mape_kpi": 0.2658464157746034,
+            "final_deviation_kpi": 0.25317387850238754,
+            "final_absolute_error": 573.7542309819305,
+            "post_shock_wape": 0.2584425908360523,
+            "post_shock_mae": 458.10456342926767,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 28,
+            "actual_kpi": 4983.0,
+            "spend": 1198189.813995821,
+            "wape_kpi": 1.2522791619683167,
+            "mape_kpi": 1.273406440640868,
+            "final_deviation_kpi": 1.198790646682182,
+            "final_absolute_error": 2716.7542309819305,
+            "post_shock_wape": 1.2370144903026326,
+            "post_shock_mae": 2192.6803210050252,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 29,
+            "actual_kpi": 3199.0,
+            "spend": 1176100.8416123712,
+            "wape_kpi": 0.4120649615223741,
+            "mape_kpi": 0.414752409087054,
+            "final_deviation_kpi": 0.4115856469468795,
+            "final_absolute_error": 932.7542309819305,
+            "post_shock_wape": 0.4097134186068815,
+            "post_shock_mae": 726.2409270656314,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 30,
+            "actual_kpi": 2098.0,
+            "spend": 1186650.9068153724,
+            "wape_kpi": 0.048609733762362176,
+            "mape_kpi": 0.03768773859741419,
+            "final_deviation_kpi": 0.07423986017675739,
+            "final_absolute_error": 168.2457690180695,
+            "post_shock_wape": 0.060100589799519925,
+            "post_shock_mae": 106.53180020709597,
+            "constraint_violations": 0
+          }
+        ],
+        "adaptive_without_ml": [
+          {
+            "seed": 1,
+            "actual_kpi": 2180.0,
+            "spend": 1189958.4526619432,
+            "wape_kpi": 0.03942934943926369,
+            "mape_kpi": 0.0420731629326098,
+            "final_deviation_kpi": 0.03805667072704056,
+            "final_absolute_error": 86.2457690180695,
+            "post_shock_wape": 0.04225059793126914,
+            "post_shock_mae": 74.89164869194447,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 2,
+            "actual_kpi": 2528.0,
+            "spend": 806889.6649801448,
+            "wape_kpi": 0.35020022209946977,
+            "mape_kpi": 0.39554817882371224,
+            "final_deviation_kpi": 0.11550125523029424,
+            "final_absolute_error": 261.7542309819305,
+            "post_shock_wape": 0.31060354516529126,
+            "post_shock_mae": 550.5628967626011,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 3,
+            "actual_kpi": 2560.0,
+            "spend": 1014181.8514218075,
+            "wape_kpi": 0.23257398027254794,
+            "mape_kpi": 0.25884966716827645,
+            "final_deviation_kpi": 0.12962152428384227,
+            "final_absolute_error": 293.7542309819305,
+            "post_shock_wape": 0.20957468540768417,
+            "post_shock_mae": 371.48335130805555,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 4,
+            "actual_kpi": 2575.0,
+            "spend": 925985.5015199655,
+            "wape_kpi": 0.2827484285057958,
+            "mape_kpi": 0.31845765995798775,
+            "final_deviation_kpi": 0.13624040040269292,
+            "final_absolute_error": 308.7542309819305,
+            "post_shock_wape": 0.25828018219460763,
+            "post_shock_mae": 457.81668464138886,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 5,
+            "actual_kpi": 2261.0,
+            "spend": 1189374.3518206414,
+            "wape_kpi": 0.03998399439482579,
+            "mape_kpi": 0.06453326535693542,
+            "final_deviation_kpi": 0.0023147396852471165,
+            "final_absolute_error": 5.245769018069495,
+            "post_shock_wape": 0.024430686476897445,
+            "post_shock_mae": 43.304816464543734,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 6,
+            "actual_kpi": 2157.0,
+            "spend": 1198350.9858308954,
+            "wape_kpi": 0.03682589961760744,
+            "mape_kpi": 0.04000381187515253,
+            "final_deviation_kpi": 0.048205614109278205,
+            "final_absolute_error": 109.2457690180695,
+            "post_shock_wape": 0.03804934281179338,
+            "post_shock_mae": 67.44467899497477,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 7,
+            "actual_kpi": 2578.0,
+            "spend": 914541.2017893785,
+            "wape_kpi": 0.27895093944865124,
+            "mape_kpi": 0.3059444376468519,
+            "final_deviation_kpi": 0.13756417562646303,
+            "final_absolute_error": 311.7542309819305,
+            "post_shock_wape": 0.26305841538237357,
+            "post_shock_mae": 466.28638161108586,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 8,
+            "actual_kpi": 2503.0,
+            "spend": 1096926.0946579408,
+            "wape_kpi": 0.08035870449555027,
+            "mape_kpi": 0.0866266674986247,
+            "final_deviation_kpi": 0.10446979503220985,
+            "final_absolute_error": 236.7542309819305,
+            "post_shock_wape": 0.07268770718374781,
+            "post_shock_mae": 128.84319979290404,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 9,
+            "actual_kpi": 1496.0,
+            "spend": 1195666.5269654784,
+            "wape_kpi": 0.3383104962078576,
+            "mape_kpi": 0.3405036997342663,
+            "final_deviation_kpi": 0.33987742174662966,
+            "final_absolute_error": 770.2457690180695,
+            "post_shock_wape": 0.3397383529858675,
+            "post_shock_mae": 602.2060426313383,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 10,
+            "actual_kpi": 2457.0,
+            "spend": 1152255.7394133739,
+            "wape_kpi": 0.09371982690310847,
+            "mape_kpi": 0.1153471471256216,
+            "final_deviation_kpi": 0.08417190826773456,
+            "final_absolute_error": 190.7542309819305,
+            "post_shock_wape": 0.0773505447578557,
+            "post_shock_mae": 137.10835130805555,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 11,
+            "actual_kpi": 2175.0,
+            "spend": 1193034.8677260813,
+            "wape_kpi": 0.030946222848308506,
+            "mape_kpi": 0.026863425095810405,
+            "final_deviation_kpi": 0.040262962766657445,
+            "final_absolute_error": 91.2457690180695,
+            "post_shock_wape": 0.03543370890221132,
+            "post_shock_mae": 62.80831535861113,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 12,
+            "actual_kpi": 2529.0,
+            "spend": 1077895.6708157437,
+            "wape_kpi": 0.18175324176335347,
+            "mape_kpi": 0.20809809689808437,
+            "final_deviation_kpi": 0.11594251363821763,
+            "final_absolute_error": 262.7542309819305,
+            "post_shock_wape": 0.16324334652398428,
+            "post_shock_mae": 289.35835130805555,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 13,
+            "actual_kpi": 2523.0,
+            "spend": 981223.7729180445,
+            "wape_kpi": 0.22969120443115937,
+            "mape_kpi": 0.2427714576171659,
+            "final_deviation_kpi": 0.11329496319067736,
+            "final_absolute_error": 256.7542309819305,
+            "post_shock_wape": 0.2168061438635875,
+            "post_shock_mae": 384.30153312623736,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 14,
+            "actual_kpi": 2612.0,
+            "spend": 874845.5879150323,
+            "wape_kpi": 0.33186960532573834,
+            "mape_kpi": 0.36958104604784947,
+            "final_deviation_kpi": 0.15256696149585783,
+            "final_absolute_error": 345.7542309819305,
+            "post_shock_wape": 0.29988884874156213,
+            "post_shock_mae": 531.5704725201767,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 15,
+            "actual_kpi": 2324.0,
+            "spend": 1197771.4939300977,
+            "wape_kpi": 0.04577070102708589,
+            "mape_kpi": 0.06412406521038838,
+            "final_deviation_kpi": 0.025484540013925566,
+            "final_absolute_error": 57.754230981930505,
+            "post_shock_wape": 0.03001697359997771,
+            "post_shock_mae": 53.20683615654039,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 16,
+            "actual_kpi": 2541.0,
+            "spend": 746680.2265363341,
+            "wape_kpi": 0.414536141928517,
+            "mape_kpi": 0.4961478894330624,
+            "final_deviation_kpi": 0.12123761453329814,
+            "final_absolute_error": 274.7542309819305,
+            "post_shock_wape": 0.34849604556129543,
+            "post_shock_mae": 617.7295634292677,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 17,
+            "actual_kpi": 2084.0,
+            "spend": 1199738.9548111374,
+            "wape_kpi": 0.10441956537197342,
+            "mape_kpi": 0.09209825123812658,
+            "final_deviation_kpi": 0.08041747788768465,
+            "final_absolute_error": 182.2457690180695,
+            "post_shock_wape": 0.11153925306549198,
+            "post_shock_mae": 197.70983051012627,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 18,
+            "actual_kpi": 2089.0,
+            "spend": 1199989.9267687278,
+            "wape_kpi": 0.05516545003958756,
+            "mape_kpi": 0.04602126350817314,
+            "final_deviation_kpi": 0.07821118584806777,
+            "final_absolute_error": 177.2457690180695,
+            "post_shock_wape": 0.06534681630934343,
+            "post_shock_mae": 115.83104263133839,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 19,
+            "actual_kpi": 2511.0,
+            "spend": 1007033.737530647,
+            "wape_kpi": 0.24153582775715474,
+            "mape_kpi": 0.2810481136520733,
+            "final_deviation_kpi": 0.10799986229559685,
+            "final_absolute_error": 244.7542309819305,
+            "post_shock_wape": 0.20927123768287972,
+            "post_shock_mae": 370.94547252017674,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 20,
+            "actual_kpi": 1228.0,
+            "spend": 1196918.5702117467,
+            "wape_kpi": 0.4706468158946187,
+            "mape_kpi": 0.4773551421891356,
+            "final_deviation_kpi": 0.4581346750700944,
+            "final_absolute_error": 1038.2457690180695,
+            "post_shock_wape": 0.46719708218278094,
+            "post_shock_mae": 828.1340729343686,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 21,
+            "actual_kpi": 2235.0,
+            "spend": 1199503.3857974245,
+            "wape_kpi": 0.03836489656175988,
+            "mape_kpi": 0.07697004257054724,
+            "final_deviation_kpi": 0.013787458291254889,
+            "final_absolute_error": 31.245769018069495,
+            "post_shock_wape": 0.01370939855077015,
+            "post_shock_mae": 24.30070839973292,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 22,
+            "actual_kpi": 2126.0,
+            "spend": 1198691.9717531507,
+            "wape_kpi": 0.05597195293084655,
+            "mape_kpi": 0.05312930682492994,
+            "final_deviation_kpi": 0.06188462475490286,
+            "final_absolute_error": 140.2457690180695,
+            "post_shock_wape": 0.0642890231841448,
+            "post_shock_mae": 113.95604263133839,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 23,
+            "actual_kpi": 2285.0,
+            "spend": 1198714.8985147413,
+            "wape_kpi": 0.07830860787350696,
+            "mape_kpi": 0.11096857810576191,
+            "final_deviation_kpi": 0.008275462104913905,
+            "final_absolute_error": 18.754230981930505,
+            "post_shock_wape": 0.04701859401226111,
+            "post_shock_mae": 83.34319979290403,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 24,
+            "actual_kpi": 2530.0,
+            "spend": 861351.1108292423,
+            "wape_kpi": 0.2987118460906526,
+            "mape_kpi": 0.31447133698766316,
+            "final_deviation_kpi": 0.116383772046141,
+            "final_absolute_error": 263.7542309819305,
+            "post_shock_wape": 0.2855797926479662,
+            "post_shock_mae": 506.20683615654036,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 25,
+            "actual_kpi": 1690.0,
+            "spend": 1199449.1932342285,
+            "wape_kpi": 0.2615720644545751,
+            "mape_kpi": 0.2543322974241705,
+            "final_deviation_kpi": 0.2542732906094948,
+            "final_absolute_error": 576.2457690180695,
+            "post_shock_wape": 0.2629767633893828,
+            "post_shock_mae": 466.14164869194445,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 26,
+            "actual_kpi": 2529.0,
+            "spend": 1069419.7539089122,
+            "wape_kpi": 0.1575513218894595,
+            "mape_kpi": 0.15673794069144814,
+            "final_deviation_kpi": 0.11594251363821763,
+            "final_absolute_error": 262.7542309819305,
+            "post_shock_wape": 0.15740304629940277,
+            "post_shock_mae": 279.0060785807828,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 27,
+            "actual_kpi": 2555.0,
+            "spend": 896387.3359431645,
+            "wape_kpi": 0.30293701004906765,
+            "mape_kpi": 0.3335335820515392,
+            "final_deviation_kpi": 0.1274152322442254,
+            "final_absolute_error": 288.7542309819305,
+            "post_shock_wape": 0.27537369170665577,
+            "post_shock_mae": 488.1159270656313,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 28,
+            "actual_kpi": 2637.0,
+            "spend": 435168.01546373894,
+            "wape_kpi": 0.6950191375124102,
+            "mape_kpi": 0.92238776945578,
+            "final_deviation_kpi": 0.16359842169394223,
+            "final_absolute_error": 370.7542309819305,
+            "post_shock_wape": 0.4871096840784853,
+            "post_shock_mae": 863.4303210050252,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 29,
+            "actual_kpi": 2568.0,
+            "spend": 605172.900047397,
+            "wape_kpi": 0.5130280355524004,
+            "mape_kpi": 0.6249103266386559,
+            "final_deviation_kpi": 0.13315159154722928,
+            "final_absolute_error": 301.7542309819305,
+            "post_shock_wape": 0.4127585806339684,
+            "post_shock_mae": 731.6386543383586,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 30,
+            "actual_kpi": 2047.0,
+            "spend": 1194653.7223512074,
+            "wape_kpi": 0.07825216008771171,
+            "mape_kpi": 0.06296523543219998,
+            "final_deviation_kpi": 0.09674403898084956,
+            "final_absolute_error": 219.2457690180695,
+            "post_shock_wape": 0.09393501111521664,
+            "post_shock_mae": 166.5052850555808,
+            "constraint_violations": 0
+          }
+        ],
+        "adaptive_ml": [
+          {
+            "seed": 1,
+            "actual_kpi": 2173.0,
+            "spend": 1188770.6720887271,
+            "wape_kpi": 0.041851383003969046,
+            "mape_kpi": 0.04037377721954622,
+            "final_deviation_kpi": 0.041145479582504196,
+            "final_absolute_error": 93.2457690180695,
+            "post_shock_wape": 0.04808021337680825,
+            "post_shock_mae": 85.2249820252778,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 2,
+            "actual_kpi": 2534.0,
+            "spend": 833259.6348838144,
+            "wape_kpi": 0.32486620150116535,
+            "mape_kpi": 0.35572775974037824,
+            "final_deviation_kpi": 0.1181488056778345,
+            "final_absolute_error": 267.7542309819305,
+            "post_shock_wape": 0.29782454943056846,
+            "post_shock_mae": 527.9113816110857,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 3,
+            "actual_kpi": 2531.0,
+            "spend": 1040814.5796554534,
+            "wape_kpi": 0.21619376818550565,
+            "mape_kpi": 0.2508850784155198,
+            "final_deviation_kpi": 0.11682503045406438,
+            "final_absolute_error": 264.7542309819305,
+            "post_shock_wape": 0.18661309524554426,
+            "post_shock_mae": 330.782593732298,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 4,
+            "actual_kpi": 2552.0,
+            "spend": 942102.8198158477,
+            "wape_kpi": 0.2598886379978149,
+            "mape_kpi": 0.2878585779325861,
+            "final_deviation_kpi": 0.12609145702045527,
+            "final_absolute_error": 285.7542309819305,
+            "post_shock_wape": 0.24129352047298364,
+            "post_shock_mae": 427.7068361565404,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 5,
+            "actual_kpi": 2180.0,
+            "spend": 1195660.845216346,
+            "wape_kpi": 0.01780933011038554,
+            "mape_kpi": 0.02424436353510046,
+            "final_deviation_kpi": 0.03805667072704056,
+            "final_absolute_error": 86.2457690180695,
+            "post_shock_wape": 0.01600072111003052,
+            "post_shock_mae": 28.36221125531866,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 6,
+            "actual_kpi": 2139.0,
+            "spend": 1199475.694696279,
+            "wape_kpi": 0.055899709241212035,
+            "mape_kpi": 0.06539873904688424,
+            "final_deviation_kpi": 0.05614826545189897,
+            "final_absolute_error": 127.2457690180695,
+            "post_shock_wape": 0.05252935537006793,
+            "post_shock_mae": 93.11134566164142,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 7,
+            "actual_kpi": 2581.0,
+            "spend": 937974.1786550105,
+            "wape_kpi": 0.26747932448584727,
+            "mape_kpi": 0.2892340107508185,
+            "final_deviation_kpi": 0.13888795085023317,
+            "final_absolute_error": 314.7542309819305,
+            "post_shock_wape": 0.2561859655022952,
+            "post_shock_mae": 454.10456342926767,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 8,
+            "actual_kpi": 2498.0,
+            "spend": 1097378.7528357706,
+            "wape_kpi": 0.07031587313057205,
+            "mape_kpi": 0.07915888486005826,
+            "final_deviation_kpi": 0.10226350299259297,
+            "final_absolute_error": 231.7542309819305,
+            "post_shock_wape": 0.06033182869910445,
+            "post_shock_mae": 106.94168464138889,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 9,
+            "actual_kpi": 1484.0,
+            "spend": 1197649.0493638236,
+            "wape_kpi": 0.3452626003563039,
+            "mape_kpi": 0.34809511856776515,
+            "final_deviation_kpi": 0.34517252264171017,
+            "final_absolute_error": 782.2457690180695,
+            "post_shock_wape": 0.3454141076131959,
+            "post_shock_mae": 612.2666486919444,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 10,
+            "actual_kpi": 2407.0,
+            "spend": 1175921.0489552184,
+            "wape_kpi": 0.05723253468644787,
+            "mape_kpi": 0.06477164640439736,
+            "final_deviation_kpi": 0.06210898787156576,
+            "final_absolute_error": 140.7542309819305,
+            "post_shock_wape": 0.05315379413841315,
+            "post_shock_mae": 94.21819979290403,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 11,
+            "actual_kpi": 2078.0,
+            "spend": 1189829.907714391,
+            "wape_kpi": 0.08957810599324666,
+            "mape_kpi": 0.08834889439662008,
+            "final_deviation_kpi": 0.0830650283352249,
+            "final_absolute_error": 188.2457690180695,
+            "post_shock_wape": 0.08867382591473377,
+            "post_shock_mae": 157.17952747982324,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 12,
+            "actual_kpi": 2505.0,
+            "spend": 1083598.9954748356,
+            "wape_kpi": 0.14792654596962826,
+            "mape_kpi": 0.15573719899293134,
+            "final_deviation_kpi": 0.1053523118480566,
+            "final_absolute_error": 238.7542309819305,
+            "post_shock_wape": 0.14388680081075364,
+            "post_shock_mae": 255.04774524744948,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 13,
+            "actual_kpi": 2500.0,
+            "spend": 972006.2818398047,
+            "wape_kpi": 0.22418289989541076,
+            "mape_kpi": 0.23499784560205633,
+            "final_deviation_kpi": 0.10314601980843972,
+            "final_absolute_error": 233.7542309819305,
+            "post_shock_wape": 0.2135430123440354,
+            "post_shock_mae": 378.5174422171465,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 14,
+            "actual_kpi": 2581.0,
+            "spend": 878068.4499263286,
+            "wape_kpi": 0.3013842106081874,
+            "mape_kpi": 0.3306281965229066,
+            "final_deviation_kpi": 0.13888795085023317,
+            "final_absolute_error": 314.7542309819305,
+            "post_shock_wape": 0.2761023936373482,
+            "post_shock_mae": 489.407593732298,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 15,
+            "actual_kpi": 2235.0,
+            "spend": 1199997.8140123547,
+            "wape_kpi": 0.013246873791191244,
+            "mape_kpi": 0.0168334150760231,
+            "final_deviation_kpi": 0.013787458291254889,
+            "final_absolute_error": 31.245769018069495,
+            "post_shock_wape": 0.008120140032451458,
+            "post_shock_mae": 14.393421736398174,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 16,
+            "actual_kpi": 2539.0,
+            "spend": 745001.246821865,
+            "wape_kpi": 0.4065936362640108,
+            "mape_kpi": 0.4828289382007052,
+            "final_deviation_kpi": 0.12035509771745138,
+            "final_absolute_error": 272.7542309819305,
+            "post_shock_wape": 0.3458312616681183,
+            "post_shock_mae": 613.0060785807829,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 17,
+            "actual_kpi": 2055.0,
+            "spend": 1199998.5823445325,
+            "wape_kpi": 0.1140647582299897,
+            "mape_kpi": 0.10727191485834424,
+            "final_deviation_kpi": 0.09321397171746255,
+            "final_absolute_error": 211.2457690180695,
+            "post_shock_wape": 0.11683249260310209,
+            "post_shock_mae": 207.09240626770202,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 18,
+            "actual_kpi": 2059.0,
+            "spend": 1199988.1924650578,
+            "wape_kpi": 0.07177845769045059,
+            "mape_kpi": 0.06964727859857045,
+            "final_deviation_kpi": 0.09144893808576905,
+            "final_absolute_error": 207.2457690180695,
+            "post_shock_wape": 0.0747323262201967,
+            "post_shock_mae": 132.46740626770202,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 19,
+            "actual_kpi": 2485.0,
+            "spend": 1047115.4749945669,
+            "wape_kpi": 0.2076258303947863,
+            "mape_kpi": 0.24391955472709187,
+            "final_deviation_kpi": 0.09652714368958908,
+            "final_absolute_error": 218.7542309819305,
+            "post_shock_wape": 0.17890082173273245,
+            "post_shock_mae": 317.1121391868434,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 20,
+            "actual_kpi": 1219.0,
+            "spend": 1193784.940344162,
+            "wape_kpi": 0.47423380580099794,
+            "mape_kpi": 0.48030578224933235,
+            "final_deviation_kpi": 0.4621060007414048,
+            "final_absolute_error": 1047.2457690180695,
+            "post_shock_wape": 0.4715885263692116,
+            "post_shock_mae": 835.9181638434595,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 21,
+            "actual_kpi": 2141.0,
+            "spend": 1196909.894820522,
+            "wape_kpi": 0.037904186151214145,
+            "mape_kpi": 0.05007226787528555,
+            "final_deviation_kpi": 0.05526574863605222,
+            "final_absolute_error": 125.2457690180695,
+            "post_shock_wape": 0.03539096978604168,
+            "post_shock_mae": 62.732557782853554,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 22,
+            "actual_kpi": 2060.0,
+            "spend": 1199915.2372754756,
+            "wape_kpi": 0.08304403105363464,
+            "mape_kpi": 0.0705723714597532,
+            "final_deviation_kpi": 0.09100767967784568,
+            "final_absolute_error": 206.2457690180695,
+            "post_shock_wape": 0.09478124561537554,
+            "post_shock_mae": 168.0052850555808,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 23,
+            "actual_kpi": 2286.0,
+            "spend": 1197764.41868757,
+            "wape_kpi": 0.07857441141507314,
+            "mape_kpi": 0.1103123794340885,
+            "final_deviation_kpi": 0.00871672051283728,
+            "final_absolute_error": 19.754230981930505,
+            "post_shock_wape": 0.04858284566406999,
+            "post_shock_mae": 86.11592706563131,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 24,
+            "actual_kpi": 2548.0,
+            "spend": 886583.8882692698,
+            "wape_kpi": 0.2864863062328239,
+            "mape_kpi": 0.2941153505696194,
+            "final_deviation_kpi": 0.12432642338876176,
+            "final_absolute_error": 281.7542309819305,
+            "post_shock_wape": 0.27912191219473337,
+            "post_shock_mae": 494.75986645957073,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 25,
+            "actual_kpi": 1668.0,
+            "spend": 1199566.98074675,
+            "wape_kpi": 0.2742495254190753,
+            "mape_kpi": 0.2709244237653762,
+            "final_deviation_kpi": 0.263980975583809,
+            "final_absolute_error": 598.2457690180695,
+            "post_shock_wape": 0.2743517791579329,
+            "post_shock_mae": 486.30452747982326,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 26,
+            "actual_kpi": 2510.0,
+            "spend": 1084424.7997196906,
+            "wape_kpi": 0.1426184935913323,
+            "mape_kpi": 0.13759883088376398,
+            "final_deviation_kpi": 0.10755860388767348,
+            "final_absolute_error": 243.7542309819305,
+            "post_shock_wape": 0.14655585861554773,
+            "post_shock_mae": 259.7788058535101,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 27,
+            "actual_kpi": 2528.0,
+            "spend": 953019.6229808917,
+            "wape_kpi": 0.24964504795276765,
+            "mape_kpi": 0.26579648896271335,
+            "final_deviation_kpi": 0.11550125523029424,
+            "final_absolute_error": 261.7542309819305,
+            "post_shock_wape": 0.23371801213191468,
+            "post_shock_mae": 414.2788058535101,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 28,
+            "actual_kpi": 2632.0,
+            "spend": 461921.5873302524,
+            "wape_kpi": 0.6575671684943926,
+            "mape_kpi": 0.8498246289964208,
+            "final_deviation_kpi": 0.16139212965432534,
+            "final_absolute_error": 365.7542309819305,
+            "post_shock_wape": 0.4823186291558685,
+            "post_shock_mae": 854.937896762601,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 29,
+            "actual_kpi": 2572.0,
+            "spend": 778766.3648346289,
+            "wape_kpi": 0.4005885231755633,
+            "mape_kpi": 0.47167169823407157,
+            "final_deviation_kpi": 0.13491662517892278,
+            "final_absolute_error": 305.7542309819305,
+            "post_shock_wape": 0.3400828505433015,
+            "post_shock_mae": 602.816684641389,
+            "constraint_violations": 0
+          },
+          {
+            "seed": 30,
+            "actual_kpi": 1988.0,
+            "spend": 1196586.586609677,
+            "wape_kpi": 0.10675666680625354,
+            "mape_kpi": 0.08724354687463862,
+            "final_deviation_kpi": 0.12277828504832873,
+            "final_absolute_error": 278.2457690180695,
+            "post_shock_wape": 0.12374768159935008,
+            "post_shock_mae": 219.34998202527777,
+            "constraint_violations": 0
+          }
+        ]
+      }
+    }
+  },
+  "quality_holdout": {
+    "precision": 0.3584905660377358,
+    "recall": 0.1557377049180328,
+    "false_positive_rate": 0.009833694866232827,
+    "threshold": 0.7058519689010798,
+    "rows": 7159,
+    "note": "Window-level metrics before two-hour confirmation; synthetic labels"
+  },
+  "reach_holdout_relative_error": {
+    "ml": {
+      "mean": 0.06167084624659166,
+      "std": 0.012740063311310335
+    },
+    "additive": {
+      "mean": 0.11107870854621989,
+      "std": 0.015005396809597584
+    }
+  },
+  "response_holdout_conversions_wape": {
+    "ml": 0.5410293647275416,
+    "baseline": 0.5332949123359382
+  }
+}
