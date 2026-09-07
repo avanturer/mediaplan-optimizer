@@ -56,6 +56,7 @@ from brain.config import (
 )
 from brain.curves import CurvePoint, ResponseCurve
 from brain.executor.estimator import ChannelEstimate, RateEstimator
+from brain.ml import MLBundle, QualityMonitor
 from brain.planner.allocator import allocate as greedy_allocate
 from brain.planner.allocator import build_models
 from brain.texts import kpi_label, num
@@ -69,6 +70,7 @@ from contracts import (
     PublicCatalog,
     TrackingStatus,
 )
+from contracts.ml import MLConfig, MLForecast, MLSignal
 
 HOURS_IN_WEEK = 168
 
@@ -97,8 +99,19 @@ class BaseExecutor:
     last_caps: dict[str, float] = field(default_factory=dict)
     lambdas: list[float] = field(default_factory=list)
     human_requests: int = 0
+    ml_config: MLConfig = field(default_factory=MLConfig)
+    ml_bundle: MLBundle | None = None
+    ml_signals: dict[str, MLSignal] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
+        self.baseline_curves = self.curves
+        if self.ml_config.enabled:
+            if self.ml_bundle is None or self.ml_bundle.catalog_id != self.catalog.catalog_id:
+                raise ValueError("ML требует обученную модель соответствующего каталога")
+            if self.ml_config.response_curves:
+                self.curves = self.ml_bundle.curves
+        self.quality_monitor = QualityMonitor(self.ml_bundle.quality) if self.ml_config.anomaly_detection else None
+        self.reach_model = self.ml_bundle.reach if self.ml_config.reach_correction else None
         self.channel_ids = [a.channel_id for a in self.plan.allocations]
         self.horizon = len(self.plan.trajectory)
         self.kpi = self.plan.kpi_name
@@ -118,11 +131,11 @@ class BaseExecutor:
     def observe(self, obs: Observation) -> list[str]:
         """Принимает факт завершённого часа; возвращает события, требующие внимания."""
         fired: list[str] = []
+        self.fact_cum_kpi += kpi_of_observation(obs, self.kpi)
         for cid in self.channel_ids:
             ch = obs.by_channel[cid]
             self.fact_cum_by_channel[cid] += ch.spend
             self.fact_cum_spend += ch.spend
-            self.fact_cum_kpi += _kpi_of(ch, self.kpi)
             if self.estimates[cid].observe(ch, self.kpi, obs.hour, rate_scale=self._rate_scale(cid, obs.hour - 1)):
                 fired.append(cid)
                 self.detection_hours.setdefault(cid, obs.hour)
@@ -138,6 +151,25 @@ class BaseExecutor:
             else:
                 what = "конверсии на рубль" if est.last_signal == "conversions" else "клики на рубль"
                 new_events.append(f"час {obs.hour}: детектор: {what} в канале {cid} упали, оценки сброшены")
+        if self.quality_monitor:
+            # ML-детектор качества трафика (экспериментальный, по умолчанию выключен): своим
+            # сигналом он поднимает тот же слом, что и статистический детектор
+            for cid in self.channel_ids:
+                previous = self.ml_signals.get(cid)
+                signal = self.quality_monitor.observe(cid, obs.by_channel[cid], self.last_caps.get(cid, 0))
+                self.ml_signals[cid] = signal
+                if signal.alert and not (previous and previous.alert):
+                    est = self.estimates[cid]
+                    recent = list(self.quality_monitor.windows[cid].rows)[-6:]
+                    est.ctr.successes = sum(row.clicks for row, _ in recent)
+                    est.ctr.trials = sum(row.impressions for row, _ in recent)
+                    est.cvr.successes = sum(row.conversions for row, _ in recent)
+                    est.cvr.trials = sum(row.clicks for row, _ in recent)
+                    est.shock_active, est.shock_hour = True, obs.hour
+                    if cid not in fired:
+                        fired.append(cid)
+                    self.detection_hours.setdefault(cid, obs.hour)
+                    new_events.append(f"час {obs.hour}: ML: {cid}: {signal.reason}; обновлены оценки, запрошен пересчёт")
         for cid in self.channel_ids:
             est = self.estimates[cid]
             if est.hours_without_delivery == PAUSE_AFTER_HOURS and self._cap_is_meaningful(cid, obs.hour - 1):
@@ -190,6 +222,39 @@ class BaseExecutor:
         )
 
     # ------------------------------------------------------------ служебное
+    def forecast(self, caps: dict[str, float]) -> MLForecast | None:
+        """Одношаговый прогноз до step; обе оценки условны на один action."""
+        if not self.ml_config.enabled:
+            return None
+        previous = {cid: self.estimates[cid].cum_reach for cid in self.channel_ids}
+
+        def predict(curves):
+            rows = {}
+            for cid in self.channel_ids:
+                curve = curves[cid]
+                share = curve.hourly_share(self.hour)
+                daily = caps[cid] / share if share > 0 else 0
+                imps = curve.impressions_at(daily) * share
+                ctr, cvr = curve.rates_at(daily)
+                pool = self.catalog.by_id(cid).capacity_mid * campaign_audience_multiplier()
+                remaining = max(pool - previous[cid], 0)
+                reach = remaining * (1 - math.exp(-imps / max(pool, 1)))
+                clicks = imps * ctr
+                rows[cid] = dict(impressions=imps, clicks=clicks, conversions=clicks*cvr,
+                                 reach=reach, spend=curve.effective_spend(daily)*share)
+            return rows
+
+        baseline = predict(self.baseline_curves)
+        effective = self._adjusted_curves(self.hour) if hasattr(self, "_adjusted_curves") else self.curves
+        rows = predict(effective)
+        additive = sum(row["reach"] for row in rows.values())
+        reach = self.reach_model.incremental({cid: row["reach"] for cid, row in rows.items()}, previous) if self.reach_model else additive
+        return MLForecast(generated_at_hour=self.hour, forecast_for_hour=self.hour+1,
+            predicted_kpi=reach if self.kpi == "reach" else sum(row[self.kpi] for row in rows.values()),
+            baseline_predicted_kpi=sum(row[self.kpi] for row in baseline.values()),
+            predicted_reach=reach, additive_predicted_reach=additive,
+            predicted_spend=sum(row["spend"] for row in rows.values()), predicted_by_channel=rows)
+
     def _caps(self, h: int, remaining_budget: float) -> dict[str, float]:
         raise NotImplementedError
 
@@ -452,7 +517,10 @@ class AdaptiveExecutor(BaseExecutor):
             if cid in self.unavailable:
                 price_ratio = 0.0
             points = [
-                CurvePoint(p.daily_spend, p.impressions * price_ratio, p.clicks, p.conversions, p.reach)
+                CurvePoint(p.daily_spend, p.impressions * price_ratio,
+                           min(p.impressions, p.clicks * est.ctr.value / max(curve.ctr, 1e-9)) * price_ratio,
+                           min(p.impressions, p.clicks * est.ctr.value / max(curve.ctr, 1e-9)) * price_ratio * min(1.0, (p.conversions / p.clicks if p.clicks else 0) * est.cvr.value / max(curve.cvr, 1e-9)),
+                           p.reach)
                 for p in curve.points
             ]
             adjusted[cid] = replace(
@@ -501,7 +569,9 @@ class AdaptiveExecutor(BaseExecutor):
             scale = budget_to_use / sum(locked.values())
             locked = {cid: v * scale for cid, v in locked.items()}
         result = greedy_allocate(
-            models, budget_to_use, self.kpi, locked=locked, max_cost_per_kpi=self.plan.brief.max_cpa_rub, steps=REPLAN_STEPS
+            models, budget_to_use, self.kpi, locked=locked, max_cost_per_kpi=self.plan.brief.max_cpa_rub,
+            steps=REPLAN_STEPS, reach_model=self.reach_model,
+            prior_reach={cid: self.estimates[cid].cum_reach for cid in self.channel_ids},
         )
         new_left = dict(result.budgets)
 
@@ -646,6 +716,10 @@ class AdaptiveExecutor(BaseExecutor):
             donors = broken + [cid for cid in donors if cid not in broken]
         kpi_old = sum(models[cid].value(min(old_left[cid], models[cid].max_budget), self.kpi) for cid in self.channel_ids)
         kpi_new = sum(models[cid].value(min(new_left[cid], models[cid].max_budget), self.kpi) for cid in self.channel_ids)
+        if self.kpi == "reach" and self.reach_model:
+            previous = {cid: self.estimates[cid].cum_reach for cid in self.channel_ids}
+            kpi_old = self.reach_model.incremental({cid: models[cid].value(min(old_left[cid], models[cid].max_budget), "reach") for cid in self.channel_ids}, previous)
+            kpi_new = self.reach_model.incremental({cid: models[cid].value(min(new_left[cid], models[cid].max_budget), "reach") for cid in self.channel_ids}, previous)
         cpa_old = remaining_budget / kpi_old if kpi_old > 0 else None
         cpa_new = remaining_budget / kpi_new if kpi_new > 0 else None
         cpa_delta = ((cpa_new - cpa_old) / cpa_old * 100) if cpa_old and cpa_new else None
@@ -746,6 +820,8 @@ def make_executor(name: str, plan: MediaPlan, catalog: PublicCatalog, curves: di
 
 
 def kpi_of_observation(obs: Observation, kpi: str) -> float:
+    if kpi == "reach":
+        return float(obs.total_reach)
     return float(sum(_kpi_of(ch, kpi) for ch in obs.by_channel.values()))
 
 

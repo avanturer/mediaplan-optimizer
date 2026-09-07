@@ -13,9 +13,9 @@
 import math
 from enum import StrEnum
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-API_VERSION = "1.0"
+API_VERSION = "1.1"
 
 
 class SeedBundle(BaseModel):
@@ -38,10 +38,14 @@ class ShockParameter(StrEnum):
     INVENTORY = "inventory"
     DEMAND = "demand"
     PAUSE = "pause"
+    FRAUD = "fraud"
+    SMS_WEEKLY_LIMIT = "sms_weekly_limit"
 
 
 class ShockEvent(BaseModel):
     """Декларативное событие сценария (контракт мира, §10)."""
+
+    model_config = ConfigDict(allow_inf_nan=False)
 
     start_hour: int = Field(ge=0)
     duration_hours: int | None = Field(default=None, ge=1, description="None = до конца кампании")
@@ -49,6 +53,12 @@ class ShockEvent(BaseModel):
     parameter: ShockParameter
     multiplier: float = Field(gt=0, description="для pause игнорируется")
     recovery: str = Field(default="none", pattern="^(none|linear)$")
+
+    @model_validator(mode="after")
+    def validate_limit(self) -> "ShockEvent":
+        if self.parameter == ShockParameter.SMS_WEEKLY_LIMIT and self.multiplier > 1:
+            raise ValueError("sms_weekly_limit задаётся долей обычной недельной квоты (0, 1]")
+        return self
 
     def factor_at(self, hour: int) -> float | None:
         """Множитель параметра в час ``hour`` или None, если событие не активно."""
@@ -101,6 +111,8 @@ class ChannelObservation(BaseModel):
     conversions: int = Field(ge=0)
     spend: float = Field(ge=0)
     ecpm: float = Field(ge=0)
+    fraud_share: float = Field(default=0.0, ge=0, le=1, description="доля показов, отмеченных измерителем как подозрительные; при отсутствии показов 0")
+    verified_impressions: int = Field(default=0, ge=0, description="показы, не отмеченные измерителем; не oracle human traffic")
 
     @property
     def ctr(self) -> float:
@@ -114,6 +126,7 @@ class ChannelObservation(BaseModel):
 class Observation(BaseModel):
     hour: int = Field(ge=0, description="индекс завершённого часа от старта кампании")
     by_channel: dict[str, ChannelObservation]
+    deduplicated_reach: int | None = Field(default=None, ge=0, description="новые уникальные кампании за час, с учётом пересечений и предыдущих часов")
 
     @property
     def total_spend(self) -> float:
@@ -133,6 +146,8 @@ class Observation(BaseModel):
 
     @property
     def total_reach(self) -> int:
+        if self.deduplicated_reach is not None:
+            return self.deduplicated_reach
         return sum(c.unique_reach for c in self.by_channel.values())
 
 
@@ -143,6 +158,7 @@ class StepMetrics(BaseModel):
     cumulative_clicks: int = Field(ge=0)
     cumulative_conversions: int = Field(ge=0)
     remaining_budget: float = Field(ge=0)
+    cumulative_reach: int = Field(default=0, ge=0)
 
 
 class StepInfo(BaseModel):
@@ -152,3 +168,4 @@ class StepInfo(BaseModel):
     applied_constraints: list[str] = Field(default_factory=list)
     messages: list[str] = Field(default_factory=list)
     terminated_reason: str | None = None
+    config_hash: str = ""

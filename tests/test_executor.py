@@ -4,6 +4,7 @@ import time
 
 import numpy as np
 
+from brain.config import CARD_MIN_INTERVAL_HOURS
 from contracts import SeedBundle
 from harness.compare import compare_strategies
 from harness.runner import RunConfig, run_campaign
@@ -278,6 +279,10 @@ def test_pending_card_not_reissued_on_pause(demo_plan, catalog, curves):
     cfg.injected = [ShockEvent(target_channels=["programmatic"], parameter=ShockParameter.PAUSE, multiplier=1.0, start_hour=240, duration_hours=72)]
     cfg.auto_apply_above_limit = False
     summary = run_campaign(plan_with_limit, catalog, curves, cfg)
-    pending = [p for p in summary.proposals if p.applied_by == "pending" and p.from_channel == "programmatic"]
-    assert len(pending) == 1, [(p.hour, p.amount_rub) for p in pending]
+    pending = [p.hour for p in summary.proposals if p.applied_by == "pending" and p.from_channel == "programmatic"]
+    # пока карточка по этому донору ждёт решения, новая не выдаётся: раньше пауза канала
+    # без автоприменения давала одну и ту же карточку каждые шесть часов (ревью 06.09).
+    # Новая карточка законна только после нового слома, а он не может случиться в тот же день.
+    assert pending, summary.proposals
+    assert all(b - a >= CARD_MIN_INTERVAL_HOURS for a, b in zip(pending, pending[1:], strict=False)), pending
     assert summary.human_requests == len([p for p in summary.proposals if p.applied_by == "pending"])

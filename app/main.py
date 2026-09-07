@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import uuid
 from contextlib import asynccontextmanager
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Literal
 
@@ -35,10 +36,13 @@ from contracts import (
     ShockEvent,
     ShockParameter,
 )
+from contracts.targeting import AudienceTargeting
 from harness.compare import compare_strategies
 from harness.retro import collect_retro_history
 from harness.runner import RunConfig, run_campaign
 from world import SCENARIOS, build_catalog
+from world.settings import WorldSettings
+from world.targeting import catalog_for_targeting
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 CASE_DEVIATION_THRESHOLD = 0.20  # порог приёмки кейса: отклонение в конце не более 20 %
@@ -64,6 +68,8 @@ PRESETS: dict[str, dict[str, Any]] = {
 
 SCENARIO_TITLES = {
     "stable": "спокойный рынок",
+    "fraud_surge": "бот-ферма в programmatic: клики растут, конверсии падают",
+    "sms_weekly_limit": "недельная квота SMS снижена вдвое",
     "ctr_drop": "CTR −40 % в крупном маркетплейсе",
     "cpm_spike": "CPM ×2 в крупном маркетплейсе",
     "cpm_spike_recovery": "CPM ×1.4 на двое суток с восстановлением",
@@ -197,6 +203,7 @@ async def _on_key_error(_: Request, exc: KeyError) -> JSONResponse:
 class BriefRequest(BaseModel):
     mode: Literal["A", "B"]
     preset: str = "all"
+    targeting: AudienceTargeting = Field(default_factory=AudienceTargeting)
     channel_ids: list[str] | None = Field(default=None, min_length=1)
     budget_rub: float | None = None
     target_kpi: str | None = None
@@ -232,6 +239,7 @@ class ShocksMixin(BaseModel):
 
 
 class RunRequest(ShocksMixin):
+    world_settings: WorldSettings | None = None  # настройки стенда: пересечения аудиторий, фрод, конкуренты
     plan_id: str
     strategy: Strategy = "adaptive"
     scenario_id: str = "stable"
@@ -259,6 +267,7 @@ class DegradationRequest(BaseModel):
 
 
 class CompareRequest(ShocksMixin):
+    world_settings: WorldSettings | None = None
     plan_id: str
     scenario_id: str = "stable"
     seeds: int = Field(default=20, ge=2, le=30)
@@ -327,6 +336,7 @@ def make_plan(req: BriefRequest) -> dict[str, Any]:
         "max_cpa_rub": req.max_cpa_rub,
         "locked": req.locked,
         "automation_limit_rub": req.automation_limit_rub,
+        "targeting": req.targeting,
     }
     if req.mode == "A":
         payload["budget_rub"] = req.budget_rub
@@ -334,7 +344,8 @@ def make_plan(req: BriefRequest) -> dict[str, Any]:
         payload["target_kpi"] = req.target_kpi
         payload["target_value"] = req.target_value
     brief = Brief(**payload)
-    media_plan = build_plan(brief, state.catalog, state.curves)
+    catalog, curves = _target_context(brief.targeting.model_dump_json())
+    media_plan = build_plan(brief, catalog, curves)
     state.plans[media_plan.plan_id] = media_plan
     return _plan_view(media_plan)
 
@@ -373,17 +384,22 @@ def _run(req: RunRequest, decisions: dict[int, str] | None = None) -> dict[str, 
         raise HTTPException(409, "план не утверждён: нажмите «Утвердить план»")
     if req.scenario_id not in SCENARIOS:
         raise HTTPException(422, f"неизвестный сценарий «{req.scenario_id}»")
+    catalog, curves = _context(media_plan)
     injected = [_shock(s, media_plan) for s in req.shocks]
     noise_seed = req.noise_seed if req.noise_seed is not None else 10_000 + req.world_seed
     seeds = SeedBundle(catalog_seed=0, world_seed=req.world_seed, noise_seed=noise_seed)
     main = run_campaign(
-        media_plan, state.catalog, state.curves,
+        media_plan, catalog, curves,
         RunConfig(
             req.strategy, req.scenario_id, seeds, injected, req.auto_apply_above_limit,
             hold_plan=req.hold_plan, approved_hours=tuple(req.approved_hours),
+            world_settings=req.world_settings,
         ),
     )
-    twin = main if req.strategy == "static" else run_campaign(media_plan, state.catalog, state.curves, RunConfig("static", req.scenario_id, seeds, injected))
+    twin = main if req.strategy == "static" else run_campaign(
+        media_plan, catalog, curves,
+        RunConfig("static", req.scenario_id, seeds, injected, world_settings=req.world_settings),
+    )
     run_id = uuid.uuid4().hex[:8]
     view = {
         "run_id": run_id,
@@ -452,14 +468,15 @@ def degradation(req: DegradationRequest) -> dict[str, Any]:
     media_plan = _plan(req.plan_id)
     _check_plan_usable(media_plan)
     _check_shock_target(req.channel_id, req.start_hour, media_plan)
+    catalog, curves = _context(media_plan)
     seeds = SeedBundle(catalog_seed=0, world_seed=req.world_seed, noise_seed=10_000 + req.world_seed)
     rows = []
     for mult in req.multipliers:
         if mult <= 0:
             raise HTTPException(422, f"сила шока должна быть больше нуля, получено {mult}")
         injected = [] if abs(mult - 1.0) < 1e-9 else [_shock(ShockRequest(channel_id=req.channel_id, parameter=req.parameter, multiplier=mult, start_hour=req.start_hour), media_plan)]
-        adaptive = run_campaign(media_plan, state.catalog, state.curves, RunConfig("adaptive", "stable", seeds, injected, req.auto_apply_above_limit, hold_plan=req.hold_plan))
-        frozen = run_campaign(media_plan, state.catalog, state.curves, RunConfig("static", "stable", seeds, injected))
+        adaptive = run_campaign(media_plan, catalog, curves, RunConfig("adaptive", "stable", seeds, injected, req.auto_apply_above_limit, hold_plan=req.hold_plan))
+        frozen = run_campaign(media_plan, catalog, curves, RunConfig("static", "stable", seeds, injected))
         rows.append(
             {
                 "multiplier": mult,
@@ -483,7 +500,8 @@ def compare(req: CompareRequest) -> dict[str, Any]:
     if req.scenario_id not in SCENARIOS:
         raise HTTPException(422, f"неизвестный сценарий «{req.scenario_id}»")
     injected = [_shock(s, media_plan) for s in req.shocks]
-    stats = compare_strategies(media_plan, state.catalog, state.curves, scenario_id=req.scenario_id, seeds=req.seeds, injected=injected, hold_plan=req.hold_plan)
+    catalog, curves = _context(media_plan)
+    stats = compare_strategies(media_plan, catalog, curves, scenario_id=req.scenario_id, seeds=req.seeds, injected=injected, hold_plan=req.hold_plan, world_settings=req.world_settings)
     out: dict[str, Any] = {}
     for name, st in stats.items():
         per_run = [
@@ -506,11 +524,12 @@ def stress(req: StressRequest) -> dict[str, Any]:
     """Стресс-тест плана до запуска: все сценарии шоков на одном мире, наша стратегия против плана без изменений."""
     media_plan = _plan(req.plan_id)
     _check_plan_usable(media_plan)
+    catalog, curves = _context(media_plan)
     seeds = SeedBundle(catalog_seed=0, world_seed=req.world_seed, noise_seed=10_000 + req.world_seed)
     rows = []
     for scenario_id in SCENARIOS:
-        adaptive = run_campaign(media_plan, state.catalog, state.curves, RunConfig("adaptive", scenario_id, seeds, [], req.auto_apply_above_limit, hold_plan=req.hold_plan))
-        frozen = run_campaign(media_plan, state.catalog, state.curves, RunConfig("static", scenario_id, seeds))
+        adaptive = run_campaign(media_plan, catalog, curves, RunConfig("adaptive", scenario_id, seeds, [], req.auto_apply_above_limit, hold_plan=req.hold_plan))
+        frozen = run_campaign(media_plan, catalog, curves, RunConfig("static", scenario_id, seeds))
         rows.append(
             {
                 "scenario_id": scenario_id,
@@ -531,6 +550,24 @@ def stress(req: StressRequest) -> dict[str, Any]:
 
 
 # ----------------------------------------------------------------- helpers
+
+
+@lru_cache(maxsize=32)
+def _target_context(targeting_json: str) -> tuple[PublicCatalog, dict[str, ResponseCurve]]:
+    """Каталог и кривые выбранного сегмента: узкий сегмент это меньше аудитории и дороже показ.
+
+    Кривые пересобираются ретро-пробами того же сегмента, поэтому план сегмента честный,
+    а не пересчитанный из широкого. Кэш по таргетингу: сбор проб занимает секунды.
+    """
+    targeting = AudienceTargeting.model_validate_json(targeting_json)
+    if targeting == state.catalog.targeting:
+        return state.catalog, state.curves
+    catalog = catalog_for_targeting(state.catalog, targeting)
+    return catalog, build_curves(collect_retro_history(catalog), catalog)
+
+
+def _context(media_plan: MediaPlan) -> tuple[PublicCatalog, dict[str, ResponseCurve]]:
+    return _target_context(media_plan.brief.targeting.model_dump_json())
 
 
 def _plan(plan_id: str) -> MediaPlan:
@@ -606,6 +643,7 @@ def _run_view(summary: RunSummary) -> dict[str, Any]:
             "err_spend": h["tracking_error_spend"],
             "err_kpi": h["tracking_error_kpi"],
             "reserve": h["reserve_rub"],
+            "deduplicated_reach": h["deduplicated_reach"],
         }
         for h in data["hours"]
     ]

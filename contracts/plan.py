@@ -102,6 +102,7 @@ class MediaPlan(BaseModel):
     """Утверждаемый артефакт планирования."""
 
     plan_id: str
+    ml_model_id: str | None = None
     catalog_id: str
     brief: Brief
     kpi_name: str
