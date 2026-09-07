@@ -44,6 +44,18 @@ class StrategyStats:
             "win_rate_vs_static": self.win_rate_vs_static,
             "mean_actual_kpi": float(np.mean([r.actual_kpi for r in self.runs])),
             "mean_actual_spend": float(np.mean([r.actual_spend for r in self.runs])),
+            # распределение по мирам, а не только среднее: гистограмма отклонений для стенда
+            "per_run": [
+                {
+                    "world_seed": r.world_seed,
+                    "final_deviation_kpi": r.final_deviation_kpi,
+                    "final_deviation_spend": r.final_deviation_spend,
+                    "actual_kpi": r.actual_kpi,
+                    "actual_spend": r.actual_spend,
+                    "detection_hours": dict(r.detection_hours),
+                }
+                for r in self.runs
+            ],
         }
 
 
@@ -61,14 +73,18 @@ def compare_strategies(
     ml: MLConfig | None = None,
     ml_bundle: MLBundle | None = None,
     hold_plan: bool = True,
+    reserve_balance: float = 1.0,
 ) -> dict[str, StrategyStats]:
     sim = Simulator(catalog, settings=world_settings)
     results: dict[str, list[RunSummary]] = {s: [] for s in strategies}
     for k in range(first_seed, first_seed + seeds):
         bundle = SeedBundle(catalog_seed=catalog_seed, world_seed=k, noise_seed=10_000 + k)
         for strategy in strategies:
-            config = RunConfig(strategy=strategy, scenario_id=scenario_id, seeds=bundle, injected=list(injected or []),
-                               ml=ml if strategy != "static" and ml else MLConfig(), hold_plan=hold_plan)
+            config = RunConfig(
+                strategy=strategy, scenario_id=scenario_id, seeds=bundle, injected=list(injected or []),
+                world_settings=world_settings, ml=ml if strategy != "static" and ml else MLConfig(),
+                hold_plan=hold_plan, reserve_balance=reserve_balance,
+            )
             results[strategy].append(run_campaign(plan, catalog, curves, config, simulator=sim, ml_bundle=ml_bundle))
 
     stats: dict[str, StrategyStats] = {}

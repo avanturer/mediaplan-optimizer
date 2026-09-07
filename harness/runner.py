@@ -41,9 +41,11 @@ class RunConfig:
     auto_apply_above_limit: bool = True
     stop_at_first_event: bool = False
     hold_plan: bool = True  # adaptive: держать план (резерв) или выжимать максимум KPI
+    reserve_balance: float = 1.0  # adaptive: 1 = недорасход равен перевыполнению, 0 = KPI ровно на плане
     approved_hours: tuple[int, ...] = ()  # ходы выше лимита, одобренные человеком (по часу карточки)
-    world_settings: WorldSettings | None = None
-    ml: MLConfig = field(default_factory=MLConfig)
+    rejected_hours: tuple[int, ...] = ()  # ходы, отклонённые или откаченные человеком: не применяются, донор заморожен
+    world_settings: WorldSettings | None = None  # привилегированные настройки стенда: пересечения, фрод, конкуренты
+    ml: MLConfig = field(default_factory=MLConfig)  # экспериментальные ML-функции, по умолчанию выключены
 
 
 def run_campaign(
@@ -69,7 +71,9 @@ def run_campaign(
         {
             "auto_apply_above_limit": config.auto_apply_above_limit,
             "hold_plan": config.hold_plan,
+            "reserve_balance": config.reserve_balance,
             "approved_hours": set(config.approved_hours),
+            "rejected_hours": set(config.rejected_hours),
         }
         if config.strategy == "adaptive"
         else {}

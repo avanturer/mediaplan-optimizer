@@ -68,9 +68,9 @@ class TrajectoryPoint(BaseModel):
 
 class Forecast(BaseModel):
     kpi_name: str
-    p10: float
+    p10: float = Field(description="нижняя граница коридора: точка минус относительная σ плана (не квантиль распределения миров)")
     p50: float
-    p90: float
+    p90: float = Field(description="верхняя граница коридора: точка плюс относительная σ плана")
     probability_of_target: float | None = Field(default=None, ge=0, le=1)
 
 

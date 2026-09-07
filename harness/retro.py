@@ -11,7 +11,13 @@
 кабинета расходится с фактом. Мозг получает только действия и наблюдения.
 """
 
-from brain.config import PUBLIC_CONTACTS_PER_USER, RETRO_WORLD_SEEDS
+from brain.config import (
+    EPISODE_BUDGET_MARGIN,
+    LADDER_START_SHARE,
+    PUBLIC_CONTACTS_PER_USER,
+    RETRO_WORLD_SEEDS,
+    SMS_CAPACITY_MULTIPLIER,
+)
 from brain.config import RETRO_LEVELS as LEVELS
 from contracts import Action, PublicCatalog, RetroEpisode, RetroHistory, SeedBundle
 from world.simulator import Simulator
@@ -21,7 +27,7 @@ def reference_daily_spend(catalog: PublicCatalog, channel_id: str) -> float:
     """Верхняя оценка дневного расхода канала по публичным числам каталога."""
     ch = catalog.by_id(channel_id)
     if ch.sms is not None:
-        return ch.sms.base_size / ch.sms.cooldown_days * ch.sms.price_per_message_rub * 1.5
+        return ch.sms.base_size / ch.sms.cooldown_days * ch.sms.price_per_message_rub * SMS_CAPACITY_MULTIPLIER
     return ch.daily_unique_capacity_band[1] * PUBLIC_CONTACTS_PER_USER * ch.expected_ecpm_range[1] / 1000
 
 
@@ -46,7 +52,7 @@ def collect_retro_history(
                 _run_probe(sim, catalog_seed, world_seed, horizon, caps, channel_ids, f"probe_{world_seed}_{level}")
             )
         # длинный эпизод на среднем уровне: профиль по часам недели
-        caps = {cid: refs[cid] * 0.15 / 24 for cid in channel_ids}
+        caps = {cid: refs[cid] * LADDER_START_SHARE / 24 for cid in channel_ids}
         episodes.append(
             _run_probe(sim, catalog_seed, world_seed, profile_days * 24, caps, channel_ids, f"profile_{world_seed}")
         )
@@ -62,7 +68,7 @@ def _run_probe(
     channel_ids: list[str],
     episode_id: str,
 ) -> RetroEpisode:
-    total_budget = sum(caps.values()) * horizon * 1.01 + 1.0
+    total_budget = sum(caps.values()) * horizon * EPISODE_BUDGET_MARGIN + 1.0
     seeds = SeedBundle(catalog_seed=catalog_seed, world_seed=world_seed, noise_seed=world_seed * 7 + horizon)
     sim.reset(seeds, "stable", horizon_hours=horizon, total_budget=total_budget, channel_ids=channel_ids)
     actions, observations = [], []

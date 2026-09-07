@@ -125,21 +125,33 @@ def allocate(
     """Жадное наливание порциями ``budget / steps`` в канал с максимальным приростом KPI.
 
     ``locked`` фиксирует бюджеты каналов (человек двигает канал руками,
-    остальные перераспределяются). ``max_cost_per_kpi`` замораживает канал,
-    когда следующая порция стоит дороже допустимого (ограничение «средняя
-    цена конверсии»).
+    остальные перераспределяются). ``max_cost_per_kpi`` это лимит на среднюю
+    цену единицы KPI по всему плану: порции наливаются по возрастанию предельной
+    цены, средняя растёт монотонно, и наливание останавливается на порции, после
+    которой средняя превысила бы лимит (жадный алгоритм при вогнутых кривых даёт
+    максимум KPI при ограничении на среднюю цену). ``reach_model`` включает
+    совместный прирост охвата с вычетом пересечений (ML-надстройка).
     """
     locked = dict(locked or {})
     budgets = {cid: 0.0 for cid in models}
     for cid, value in locked.items():
         budgets[cid] = min(value, models[cid].max_budget)
     free_budget = budget - sum(budgets.values())
-    eps = max(budget / steps, 1.0)
+    # порция от размещаемой суммы, а не от бюджета брифа: при бюджете много больше ёмкости
+    # порция переставала влезать в потолок любого канала и план выходил пустым
+    eps = max(min(budget, sum(m.max_budget for m in models.values())) / steps, 1.0)
     frozen: dict[str, str] = {cid: "зафиксирован вручную" for cid in locked}
     order: list[str] = []
     explanation: list[str] = []
     joint_reach = reach_model if kpi == "reach" else None
     reach_values = {cid: model.value(budgets[cid], "reach") for cid, model in models.items()} if joint_reach else {}
+    spent = sum(budgets.values())
+    # накопленный KPI нужен для лимита на среднюю цену; при совместном охвате он тоже совместный
+    total_kpi = (
+        joint_reach.incremental(reach_values, prior_reach)
+        if joint_reach
+        else sum(models[cid].value(b, kpi) for cid, b in budgets.items())
+    )
 
     while free_budget >= eps * 0.5:
         best_cid, best_gain = None, 0.0
@@ -153,20 +165,25 @@ def allocate(
                 continue
             gain = model.value(b + eps, kpi) - model.value(b, kpi)
             if joint_reach:
+                # при цели «охват» прирост считается совместно: ML-модель вычитает пересечение
+                # аудиторий каналов, поэтому вклад порции зависит от того, что уже куплено
                 candidate = {**reach_values, cid: model.value(b + eps, "reach")}
                 gain = joint_reach.incremental(candidate, prior_reach) - current_reach
-            if max_cost_per_kpi is not None and gain > 0 and eps / gain > max_cost_per_kpi:
-                frozen[cid] = f"следующая порция дороже лимита ({eps / gain:,.0f} ₽ за единицу KPI)"
-                continue
             if gain > best_gain:
                 best_cid, best_gain = cid, gain
         if best_cid is None:
             break
+        if max_cost_per_kpi is not None and (spent + eps) / max(total_kpi + best_gain, 1e-9) > max_cost_per_kpi:
+            for cid in models:
+                frozen.setdefault(cid, f"средняя цена за единицу KPI достигла лимита {max_cost_per_kpi:,.0f} ₽")
+            break
+        spent += eps
+        total_kpi += best_gain
         if best_cid not in order:
             order.append(best_cid)
             explanation.append(
-                f"шаг {len(order)}: {best_cid} получает бюджет, предельная цена "
-                f"{eps / best_gain:,.0f} ₽ за единицу KPI"
+                f"шаг {len(order)}: {best_cid} получает бюджет, первая порция по "
+                f"{eps / best_gain:,.0f} ₽ за единицу KPI (цена последней порции в таблице плана)"
             )
         budgets[best_cid] += eps
         if joint_reach:

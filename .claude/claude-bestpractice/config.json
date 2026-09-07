@@ -1,0 +1,42 @@
+{
+  "artifact_globs": [
+    "junit.xml",
+    "report.xml",
+    "test-results.xml",
+    "pytest-report.json",
+    "test-results/**/*.xml",
+    "reports/**/*.xml",
+    "target/nextest/**/*.xml"
+  ],
+  "autonomy": "vibecode",
+  "block_unfinished_work": true,
+  "clean_rerun": null,
+  "commit_conventions": true,
+  "compare_dependencies": true,
+  "exempt_paths": [
+    "app/static/vendor/"
+  ],
+  "isolate_databases": true,
+  "lease_ttl_seconds": 1800.0,
+  "leases_enabled": true,
+  "loop_detect": true,
+  "manage_pull_requests": true,
+  "max_repeat_signature": 3,
+  "max_tool_calls": 0,
+  "protect_trunk": true,
+  "report_defects": "local",
+  "require_task": true,
+  "require_worktree": true,
+  "scope_drift_block": true,
+  "stage_override": null,
+  "task_idle_hours": 24.0,
+  "task_queue_stale_days": 21.0,
+  "test_command": [
+    "python3",
+    "-m",
+    "pytest",
+    "-q"
+  ],
+  "witness_exclude": [],
+  "worktree_setup": []
+}

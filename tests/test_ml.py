@@ -104,5 +104,7 @@ def test_model_replay_and_human_limit(bundle, catalog, curves):
     replay = run_campaign(media_plan, catalog, curves, config, ml_bundle=restored)
     assert run.hours == replay.hours
     assert run.proposals
-    assert all(p.applied_by == "pending" for p in run.proposals)
+    # карточки «держим» с нулевой суммой выдаёт сама система: денег они не двигают,
+    # поэтому лимит полномочий к ним не относится (docs/decisions.md, запись 30)
+    assert all(p.applied_by == "pending" for p in run.proposals if p.amount_rub > 0)
     assert run.actual_spend <= media_plan.total_budget_rub+1e-6
